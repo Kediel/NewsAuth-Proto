@@ -19,7 +19,7 @@ type Leaf struct {
 
 func AddLeaf(leaf Leaf) error {
   ctx := context.Background() // TODO(z-tech): what's the deal with this?
-  g, err := grpc.Dial(*trillianLog, grpc.WithInsecure()) // TODO(z-tech): secure this. use singleton?
+  g, err := grpc.Dial(os.Getenv("LOG_ADDRESS"), grpc.WithInsecure()) // TODO(z-tech): secure this. use singleton?
   if err != nil {
     // log.Fatalf("Failed to dial Trillian Log: %v", err)
   }
