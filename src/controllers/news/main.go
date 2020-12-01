@@ -42,13 +42,13 @@ func PostNews(c *gin.Context) {
   }
 
   leafData, err2 := json.Marshal(postNewsSchema)
-  err3 := logDatalayer.AddLeaf(leafData)
+  proof, err3 := logDatalayer.AddLeaf(leafData)
   if err2 != nil || err3 != nil {
     c.AbortWithStatusJSON(500, gin.H{"error": "unexpected error"})
     return
   }
 
   c.JSON(201, gin.H{
-    "message": "pong",
+    "proof": proof,
   })
 }
