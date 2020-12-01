@@ -1,10 +1,14 @@
 package newsController
 
 import (
+  "encoding/json"
+  "fmt"
   "log"
 
   "github.com/gin-gonic/gin"
   "github.com/go-ozzo/ozzo-validation/v4"
+
+  "github.com/z-tech/blue/src/datalayers/log"
 )
 
 // TODO(z-tech): what are the fields we actually want?
@@ -24,17 +28,23 @@ func (postNewsSchema PostNewsSchema) Validate() error {
 
 func PostNews(c *gin.Context) {
   postNewsSchema := PostNewsSchema{}
-  bindErr := c.BindJSON(&postNewsSchema)
-  if bindErr != nil {
-    log.Printf("warn: unable to parse request body %+v", bindErr)
+  err := c.BindJSON(&postNewsSchema)
+  if err != nil {
+    log.Printf("warn: unable to parse request body %+v", err)
     c.AbortWithStatusJSON(400, gin.H{"error": "unable to parse request body"})
     return
   }
 
-  validateErr := postNewsSchema.Validate()
-  if validateErr != nil {
-    log.Printf("warn: unable to validate request body %+v", validateErr)
-    c.AbortWithStatusJSON(400, gin.H{"error": "unable to validate request body properties"})
+  err1 := postNewsSchema.Validate()
+  if err1 != nil {
+    c.AbortWithStatusJSON(400, gin.H{"error": fmt.Sprintf("one or more properties in request body are not valid: %s", err1)})
+    return
+  }
+
+  leafData, err2 := json.Marshal(postNewsSchema)
+  err3 := logDatalayer.AddLeaf(leafData)
+  if err2 != nil || err3 != nil {
+    c.AbortWithStatusJSON(500, gin.H{"error": "unexpected error"})
     return
   }
 
