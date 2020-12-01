@@ -7,5 +7,5 @@ import (
 )
 
 func ApplyToEngine(engine *gin.Engine) {
-	engine.GET("/ping", healthController.Ping)
+  engine.GET("/ping", healthController.Ping)
 }

@@ -7,5 +7,5 @@ import (
 )
 
 func ApplyToEngine(engine *gin.Engine) {
-	engine.POST("/v1/news", newsController.PostNews)
+  engine.POST("/v1/news", newsController.PostNews)
 }
