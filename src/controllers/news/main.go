@@ -59,7 +59,7 @@ func PostNews(ctx *gin.Context) {
 
   proof, isDup, getProofErr := logDatalayer.AddLeaf(ctx, leafData)
   if getProofErr != nil {
-    ctx.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{})
+    ctx.JSON(http.StatusInternalServerError, gin.H{})
     ctx.Abort()
     return
   }
