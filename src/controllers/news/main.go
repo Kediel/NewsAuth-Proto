@@ -3,12 +3,14 @@ package newsController
 import (
   "encoding/json"
   "fmt"
-  "log"
+  "net/http"
 
   "github.com/gin-gonic/gin"
+  "github.com/gin-gonic/gin/binding"
   "github.com/go-ozzo/ozzo-validation/v4"
 
   "github.com/z-tech/blue/src/datalayers/log"
+  "github.com/z-tech/blue/src/datalayers/map"
 )
 
 // TODO(z-tech): what are the fields we actually want?
@@ -26,29 +28,46 @@ func (postNewsSchema PostNewsSchema) Validate() error {
   )
 }
 
-func PostNews(c *gin.Context) {
+func ValidatePostNews(ctx *gin.Context) {
   postNewsSchema := PostNewsSchema{}
-  err := c.BindJSON(&postNewsSchema)
-  if err != nil {
-    log.Printf("warn: unable to parse request body %+v", err)
-    c.AbortWithStatusJSON(400, gin.H{"error": "unable to parse request body"})
+  bindErr := ctx.ShouldBindWith(&postNewsSchema, binding.JSON)
+  if bindErr != nil {
+    ctx.JSON(http.StatusBadRequest, gin.H{"error": bindErr.Error()})
+    ctx.Abort()
+    return
+  }
+  ctx.Set("postNewsSchema", postNewsSchema)
+
+  validateErr := postNewsSchema.Validate()
+  if validateErr != nil {
+    ctx.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("one or more properties in request body are not valid: %s", validateErr)})
+    ctx.Abort()
+    return
+  }
+}
+
+func PostNews(ctx *gin.Context) {
+  postNewsSchema, _ := ctx.Get("postNewsSchema")
+  leafData, marshalErr := json.Marshal(postNewsSchema)
+  if marshalErr != nil {
+    ctx.JSON(http.StatusInternalServerError, gin.H{})
+    ctx.Abort()
     return
   }
 
-  err1 := postNewsSchema.Validate()
-  if err1 != nil {
-    c.AbortWithStatusJSON(400, gin.H{"error": fmt.Sprintf("one or more properties in request body are not valid: %s", err1)})
+  mapDatalayer.AddLeaf(ctx, "HELLOKEY", leafData)
+
+  proof, isDup, getProofErr := logDatalayer.AddLeaf(ctx, leafData)
+  if getProofErr != nil {
+    ctx.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{})
+    ctx.Abort()
+    return
+  }
+  if isDup != false {
+    ctx.JSON(200, proof)
+    ctx.Abort()
     return
   }
 
-  leafData, err2 := json.Marshal(postNewsSchema)
-  proof, err3 := logDatalayer.AddLeaf(leafData)
-  if err2 != nil || err3 != nil {
-    c.AbortWithStatusJSON(500, gin.H{"error": "unexpected error"})
-    return
-  }
-
-  c.JSON(201, gin.H{
-    "proof": proof,
-  })
+  ctx.JSON(201, proof)
 }

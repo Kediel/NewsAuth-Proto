@@ -49,7 +49,7 @@ func getRoot(c context.Context, tc trillian.TrillianLogClient) (*types.LogRootV1
     return nil, reqErr
   }
 
-  var root types.LogRootV1 // TODO(z-tech): verify hash?
+  var root types.LogRootV1
   unmarshalErr := root.UnmarshalBinary(rootResponse.SignedLogRoot.LogRoot)
   if (unmarshalErr != nil) {
     return nil, unmarshalErr
@@ -57,9 +57,8 @@ func getRoot(c context.Context, tc trillian.TrillianLogClient) (*types.LogRootV1
   return &root, nil
 }
 
-func AddLeaf(data []byte) (*trillian.GetInclusionProofByHashResponse, error) {
+func AddLeaf(ctx context.Context, data []byte) (*trillian.GetInclusionProofByHashResponse, bool, error) {
   // 1) initialize some stuff
-  ctx := context.Background()
   tc, g1, getLogClientErr := getTrillianClient()
   if getLogClientErr != nil {
     fmt.Printf("error: getTrillianClient() %+v\n", getLogClientErr)
@@ -106,11 +105,13 @@ func AddLeaf(data []byte) (*trillian.GetInclusionProofByHashResponse, error) {
   }
 
   // 7) Check if dup
+  isDup := false
   if queueLeafResp.QueuedLeaf.Status != nil { // not sure why status missing for new leaves
     respCode := codes.Code(queueLeafResp.QueuedLeaf.Status.Code)
     if respCode != codes.OK && respCode != codes.AlreadyExists {
       fmt.Printf("error: queue leaf status is unsuccessful %d %v\n", LOG_ID, respCode)
     } else if (respCode != codes.OK && respCode == codes.AlreadyExists) {
+      isDup = true
       fmt.Printf("warn: queued leaf is a duplicate %d %v\n", LOG_ID, respCode)
     }
   }
@@ -132,5 +133,5 @@ func AddLeaf(data []byte) (*trillian.GetInclusionProofByHashResponse, error) {
     fmt.Printf("error: failed to get new tree root %d: %v\n", LOG_ID, getProofErr)
   }
 
-  return getProofResp, nil
+  return getProofResp, isDup, nil
 }
