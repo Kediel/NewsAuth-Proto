@@ -3,6 +3,8 @@ package logDatalayer
 import (
   "context"
   "fmt"
+  "os"
+  "strconv"
 
   "github.com/google/trillian"
   "github.com/google/trillian/client"
@@ -13,10 +15,8 @@ import (
   _ "github.com/google/trillian/merkle/rfc6962"
 )
 
-const LOG_ID = int64(1067636684015883737)
-const LOG_ADDRESS = "ec2-3-91-133-44.compute-1.amazonaws.com:8090"
-
 func getAdminClient() (trillian.TrillianAdminClient, *grpc.ClientConn, error) {
+  LOG_ADDRESS := os.Getenv("LOG_ADDRESS")
   g, dialErr := grpc.Dial(LOG_ADDRESS, grpc.WithInsecure()) // TODO(z-tech): secure this
   if dialErr != nil {
     return nil, nil, dialErr
@@ -26,6 +26,7 @@ func getAdminClient() (trillian.TrillianAdminClient, *grpc.ClientConn, error) {
 }
 
 func getTrillianClient() (trillian.TrillianLogClient, *grpc.ClientConn, error) {
+  LOG_ADDRESS := os.Getenv("LOG_ADDRESS")
   g, dialErr := grpc.Dial(LOG_ADDRESS, grpc.WithInsecure()) // TODO(z-tech): secure this
   if dialErr != nil {
     return nil, nil, dialErr
@@ -43,6 +44,7 @@ func getWriterClient(tc trillian.TrillianLogClient, tree *trillian.Tree, root ty
 }
 
 func getRoot(c context.Context, tc trillian.TrillianLogClient) (*types.LogRootV1, error) {
+  LOG_ID, _ := strconv.ParseInt(os.Getenv("LOG_ID"), 10, 64)
   rootRequest := &trillian.GetLatestSignedLogRootRequest{LogId: LOG_ID}
   rootResponse, reqErr := tc.GetLatestSignedLogRoot(c, rootRequest)
   if reqErr != nil {
@@ -59,6 +61,7 @@ func getRoot(c context.Context, tc trillian.TrillianLogClient) (*types.LogRootV1
 
 func AddLeaf(ctx context.Context, data []byte) (*trillian.GetInclusionProofByHashResponse, bool, error) {
   // 1) initialize some stuff
+  LOG_ID, _ := strconv.ParseInt(os.Getenv("LOG_ID"), 10, 64)
   tc, g1, getLogClientErr := getTrillianClient()
   if getLogClientErr != nil {
     fmt.Printf("error: getTrillianClient() %+v\n", getLogClientErr)

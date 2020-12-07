@@ -3,6 +3,8 @@ package mapDatalayer
 import (
   "context"
   "fmt"
+  "os"
+  "strconv"
 
   "github.com/google/trillian"
   "github.com/google/trillian/client"
@@ -12,10 +14,8 @@ import (
   _ "github.com/google/trillian/merkle/coniks"
 )
 
-const MAP_ID = int64(8499339143476310100)
-const MAP_ADDRESS = "ec2-3-91-133-44.compute-1.amazonaws.com:8093"
-
 func getAdminClient() (trillian.TrillianAdminClient, *grpc.ClientConn, error) {
+  MAP_ADDRESS := os.Getenv("MAP_ADDRESS")
   g, dialErr := grpc.Dial(MAP_ADDRESS, grpc.WithInsecure()) // TODO(z-tech): secure this
   if dialErr != nil {
     return nil, nil, dialErr
@@ -25,6 +25,7 @@ func getAdminClient() (trillian.TrillianAdminClient, *grpc.ClientConn, error) {
 }
 
 func getTrillianClient() (trillian.TrillianMapClient, *grpc.ClientConn, error) {
+  MAP_ADDRESS := os.Getenv("MAP_ADDRESS")
   g, dialErr := grpc.Dial(MAP_ADDRESS, grpc.WithInsecure()) // TODO(z-tech): secure this
   if dialErr != nil {
     return nil, nil, dialErr
@@ -42,6 +43,7 @@ func getWriterClient(tc trillian.TrillianMapClient, tree *trillian.Tree) (*clien
 }
 
 func getRoot(c context.Context, tc trillian.TrillianMapClient) (*types.MapRootV1, error) {
+  MAP_ID, _ := strconv.ParseInt(os.Getenv("MAP_ID"), 10, 64)
   rootRequest := &trillian.GetSignedMapRootRequest{MapId: MAP_ID}
   rootResponse, reqErr := tc.GetSignedMapRoot(c, rootRequest)
   if reqErr != nil {
@@ -57,6 +59,7 @@ func getRoot(c context.Context, tc trillian.TrillianMapClient) (*types.MapRootV1
 
 func AddLeaf(ctx context.Context, key string, data []byte) {
   // 1) initialize some stuff
+  MAP_ID, _ := strconv.ParseInt(os.Getenv("MAP_ID"), 10, 64)
   tc, g1, getMapClientErr := getTrillianClient()
   if getMapClientErr != nil {
     fmt.Printf("error: getTrillianClient() %+v\n", getMapClientErr)
