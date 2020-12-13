@@ -1,6 +1,7 @@
 package newsController
 
 import (
+  "crypto/sha256"
   "encoding/json"
   "fmt"
   "net/http"
@@ -55,19 +56,35 @@ func PostNews(ctx *gin.Context) {
     return
   }
 
-  mapDatalayer.AddLeaf(ctx, "HELLOKEY", leafData)
-
   proof, isDup, getProofErr := logDatalayer.AddLeaf(ctx, leafData)
   if getProofErr != nil {
     ctx.JSON(http.StatusInternalServerError, gin.H{})
     ctx.Abort()
     return
   }
-  if isDup != false {
-    ctx.JSON(200, proof)
+
+  hash := sha256.Sum256(leafData)
+  key := hash[:]
+  if (isDup == false) {
+    addLeafErr := mapDatalayer.AddLeaf(ctx, key, leafData)
+    if addLeafErr != nil {
+      ctx.JSON(http.StatusInternalServerError, gin.H{})
+      ctx.Abort()
+      return
+    }
+  }
+  mapLeaf, mapRoot, getLeafErr := mapDatalayer.GetLeaf(ctx, key)
+  if getLeafErr != nil {
+    ctx.JSON(http.StatusInternalServerError, gin.H{})
     ctx.Abort()
     return
   }
 
-  ctx.JSON(201, proof)
+  if isDup == true {
+    ctx.JSON(200, gin.H{"proof": proof, "mapLeaf": mapLeaf, "mapRoot": mapRoot})
+    ctx.Abort()
+    return
+  }
+
+  ctx.JSON(201, gin.H{"proof": proof, "mapLeaf": mapLeaf, "mapRoot": mapRoot})
 }
