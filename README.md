@@ -1,1 +1,2 @@
-# blue - Personality for Google Trillain Log and Map Servers
+# blue
+API wrapper for [Google Trillian](https://github.com/google/trillian) cryptographically verified logs
