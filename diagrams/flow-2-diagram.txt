@@ -1,0 +1,23 @@
+participant Editor
+participant CMS
+participant Client
+participant Log Server
+participant Map Server
+participant MySQL
+Title: Flow 2. Editor publishes revision of existing news
+Editor->CMS: presses republish
+CMS->Client: POST /v1/news/Revision
+Client->Client: logKey = sha256(newContent)
+Client->Client: mapKey = ArticleID = sha256(oldContent)
+Client->Log Server: addLogLeaf(logKey, newContent)
+Log Server->MySQL: write
+MySQL-->Log Server: ok
+Log Server-->Client: proof, isDup
+Note right of Client: if isDup=false
+Client->Map Server: addMapLeaf(mapKey, newContent)
+Map Server->MySQL: write
+MySQL-->Map Server: ok
+Map Server-->Client: ok
+Note right of Client: endif
+Client-->CMS: proof
+CMS-->Editor: republish success

@@ -1,0 +1,22 @@
+participant Editor
+participant CMS
+participant Client
+participant Log Server
+participant Map Server
+participant MySQL
+Title: Flow 1. Editor publishes news
+Editor->CMS: presses publish
+CMS->Client: POST /v1/news
+Client->Client: key = articleID = sha256(content)
+Client->Log Server: addLogLeaf(key, content)
+Log Server->MySQL: write
+MySQL-->Log Server: ok
+Log Server-->Client: proof, isDup
+Note right of Client: if isDup=false
+Client->Map Server: addMapLeaf(key, content)
+Map Server->MySQL: write
+MySQL-->Map Server: ok
+Map Server-->Client: ok
+Note right of Client: endif
+Client-->CMS: articleID, proof
+CMS-->Editor: success
