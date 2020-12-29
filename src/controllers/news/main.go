@@ -1,6 +1,7 @@
 package newsController
 
 import (
+  b64 "encoding/base64"
   "crypto/sha256"
   "encoding/json"
   "fmt"
@@ -41,7 +42,7 @@ func (postNewsSchema PostNewsSchema) Validate() error {
 
 func ValidatePostNews(ctx *gin.Context) {
   postNewsSchema := PostNewsSchema{}
-  bindErr := ctx.ShouldBindWith(&postNewsSchema, binding.JSON)
+  bindErr := ctx.ShouldBindBodyWith(&postNewsSchema, binding.JSON)
   if bindErr != nil {
     ctx.JSON(http.StatusBadRequest, gin.H{"error": bindErr.Error()})
     ctx.Abort()
@@ -59,14 +60,15 @@ func ValidatePostNews(ctx *gin.Context) {
 
 func ValidatePostNewsRevision(ctx *gin.Context) {
   ValidatePostNews(ctx)
+
   articleIDSchema := ArticleIDSchema{}
-  bindErr := ctx.ShouldBindWith(&articleIDSchema, binding.JSON)
+  bindErr := ctx.ShouldBindBodyWith(&articleIDSchema, binding.JSON)
   if bindErr != nil {
+    fmt.Printf("HELLLO 4 %+v\n", bindErr)
     ctx.JSON(http.StatusBadRequest, gin.H{"error": bindErr.Error()})
     ctx.Abort()
     return
   }
-  ctx.Set("articleID", articleIDSchema.ArticleID)
 
   validateErr := articleIDSchema.Validate()
   if validateErr != nil {
@@ -74,6 +76,7 @@ func ValidatePostNewsRevision(ctx *gin.Context) {
     ctx.Abort()
     return
   }
+  ctx.Set("articleID", articleIDSchema.ArticleID)
 }
 
 func PostNews(ctx *gin.Context) {
@@ -126,6 +129,7 @@ func PostNewsRevision(ctx *gin.Context) {
     ctx.Abort()
     return
   }
+  fmt.Printf("HELLO 1 %+v\n", articleID)
 
   postNewsSchema, _ := ctx.Get("postNewsSchema")
   leafData, marshalErr := json.Marshal(postNewsSchema)
@@ -144,28 +148,29 @@ func PostNewsRevision(ctx *gin.Context) {
 
   fmt.Printf("HLLOO %+v %v %v\n", proof, isDup, articleID)
 
-  // hash := []byte(articleID)
-  // key := hash[:]
-  // if (isDup == false) {
-  //   addLeafErr := mapDatalayer.AddLeaf(ctx, key, leafData)
-  //   if addLeafErr != nil {
-  //     ctx.JSON(http.StatusInternalServerError, gin.H{})
-  //     ctx.Abort()
-  //     return
-  //   }
-  // }
-  // mapLeaf, mapRoot, getLeafErr := mapDatalayer.GetLeaf(ctx, key)
-  // if getLeafErr != nil {
-  //   ctx.JSON(http.StatusInternalServerError, gin.H{})
-  //   ctx.Abort()
-  //   return
-  // }
-  //
-  // if isDup == true {
-  //   ctx.JSON(200, gin.H{"proof": proof, "mapLeaf": mapLeaf, "mapRoot": mapRoot})
-  //   ctx.Abort()
-  //   return
-  // }
-  //
-  // ctx.JSON(201, gin.H{"proof": proof, "mapLeaf": mapLeaf, "mapRoot": mapRoot})
+  uDec, _ := b64.URLEncoding.DecodeString(articleID)
+  hash := []byte(uDec)
+  key := hash[:]
+  if (isDup == false) {
+    addLeafErr := mapDatalayer.AddLeaf(ctx, key, leafData)
+    if addLeafErr != nil {
+      ctx.JSON(http.StatusInternalServerError, gin.H{})
+      ctx.Abort()
+      return
+    }
+  }
+  mapLeaf, mapRoot, getLeafErr := mapDatalayer.GetLeaf(ctx, key)
+  if getLeafErr != nil {
+    ctx.JSON(http.StatusInternalServerError, gin.H{})
+    ctx.Abort()
+    return
+  }
+
+  if isDup == true {
+    ctx.JSON(200, gin.H{"proof": proof, "mapLeaf": mapLeaf, "mapRoot": mapRoot})
+    ctx.Abort()
+    return
+  }
+
+  ctx.JSON(201, gin.H{"proof": proof, "mapLeaf": mapLeaf, "mapRoot": mapRoot})
 }
