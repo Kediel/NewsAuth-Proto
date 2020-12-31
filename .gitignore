@@ -1,1 +1,4 @@
 config.sh
+misc/typescript/node_modules
+misc/typescript/package-lock.json
+misc/typescript/*.js
