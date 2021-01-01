@@ -16,9 +16,9 @@ test('rootFromInclusionProof - only one leaf', () => {
   expect(computedRoot.toString('base64')).toEqual(b64RootHash);
 });
 
-test.only('rootFromInclusionProof - two leaves', () => {
+test('rootFromInclusionProof - two leaves', () => {
   const b64RootHash: string = '0hcIpiYpMMUsS/lKLMlYzswE7vU6JDOq6Wm5QmbEcYg=';
-  const b64LeafHash: string = 'HRD7QHvXXYSEcEfshyQMWIEnavYo0gKghOGmPsur2Zk=';
+  const b64LeafHash: string = '5OEffD4ILe07w1BKbLj0SYf6XecfJgFx3xwI+Zgyxos=';
   const b64Proofs: string[] = ['uEyLjXl8SvjVS657SIjyi4bVubaE8b8Gc0n0sm5hnfw='];
   const leafHash: Buffer = Buffer.from(b64LeafHash, 'base64');
   const leafIndex = 1;

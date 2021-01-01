@@ -7,6 +7,16 @@ import {
   numToUINT64
 } from '../decomposeProof';
 
+test.skip('numToUINT64', () => {
+  const max = Number.MAX_SAFE_INTEGER; // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/MAX_SAFE_INTEGER
+  let i = 0;
+  while (i <= max) {
+    expect(i.toString()).toEqual(numToUINT64(i).toString(10));
+    console.log(i);
+    i++;
+  }
+});
+
 test('getMinNumBits', () => {
   // Testing output against: https://golang.org/pkg/math/bits/#Len64
   const basicRubric: number[] = [

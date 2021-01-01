@@ -1,8 +1,9 @@
 package logDatalayer
 
 import (
-  b64 "encoding/base64"
+  // b64 "encoding/base64"
   "context"
+  "crypto"
   "fmt"
   "os"
   "strconv"
@@ -12,8 +13,9 @@ import (
   "github.com/google/trillian/types"
   "google.golang.org/grpc"
   "google.golang.org/grpc/codes"
+  "github.com/google/trillian/merkle"
 
-  _ "github.com/google/trillian/merkle/rfc6962"
+  "github.com/google/trillian/merkle/rfc6962"
 )
 
 func getAdminClient() (trillian.TrillianAdminClient, *grpc.ClientConn, error) {
@@ -126,9 +128,6 @@ func AddLeaf(ctx context.Context, data []byte) (*trillian.GetInclusionProofByHas
     fmt.Printf("error: failed to get new tree root %d: %v\n", LOG_ID, getNewRootErr)
   }
 
-  sEnc := b64.StdEncoding.EncodeToString(newRoot.RootHash)
-  fmt.Printf("new root: %+v %+v %+v\n", sEnc, leaf.LeafIndex, newRoot.TreeSize)
-
   // 9) Get the inclusion proof from hash
   getProofResp, getProofErr := tc.GetInclusionProofByHash(ctx,
     &trillian.GetInclusionProofByHashRequest{
@@ -140,10 +139,14 @@ func AddLeaf(ctx context.Context, data []byte) (*trillian.GetInclusionProofByHas
     fmt.Printf("error: failed to get new tree root %d: %v\n", LOG_ID, getProofErr)
   }
 
-  //fmt.Printf("LEAF HASH IS: %+v\n", b64.StdEncoding.EncodeToString(leaf.MerkleLeafHash))
-  //merkle.ChainInner(leaf.MerkleLeafHash, getProofResp.Proof[0].Hashes, leaf.LeafIndex)
-  // fmt.Printf("tree: %+v\n", getProofResp.Proof[0].Hashes)
-  fmt.Printf("root hash: %+v\n", b64.StdEncoding.EncodeToString(newRoot.RootHash))
+  // 10) verify the inclusion proof TODO: this is failing
+  hasher := rfc6962.New(crypto.SHA256)
+  verifier := merkle.NewLogVerifier(hasher)
+  verifyErr := verifier.VerifyInclusionProof(int64(leaf.LeafIndex), int64(newRoot.TreeSize), getProofResp.Proof[0].Hashes, newRoot.RootHash, leaf.MerkleLeafHash)
+  if verifyErr != nil {
+    fmt.Printf("error: failed to verify inclusion %d: %+v\n", LOG_ID, verifyErr)
+  }
+  //fmt.Printf("root, newRoot: %+v %+v\n", root, newRoot)
 
   return getProofResp, isDup, nil
 }

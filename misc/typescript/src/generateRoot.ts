@@ -1,34 +1,5 @@
-import * as crypto from 'crypto';
-
+import { chainInner, chainBorderRight } from './chainSeeds';
 import { decomposeInclusionProof } from './decomposeProof';
-
-// prettier --write --single-quote verify.ts
-// tsc verify.ts && node verify.js
-
-function hashChildren(l: Buffer, r: Buffer): Buffer {
-  const buf: Buffer = Buffer.concat([l, r]);
-  const hash: Buffer = crypto.createHash('sha256').update(buf).digest();
-  return hash;
-}
-
-function chainInner(seed: Buffer, proof: Buffer[], index: number): Buffer {
-  proof.forEach((hash: Buffer, i: number): void => {
-    if (((i >> i) & 1) === 0) {
-      seed = hashChildren(seed, hash);
-    } else {
-      seed = hashChildren(hash, seed);
-    }
-    // console.log(seed.toString('base64'));
-  });
-  return seed;
-}
-
-function chainBorderRight(seed: Buffer, proof: Buffer[]): Buffer {
-  proof.forEach((hash: Buffer): void => {
-    seed = hashChildren(hash, seed);
-  });
-  return seed;
-}
 
 export function rootFromInclusionProof(
   leafIndex: number,
@@ -57,6 +28,7 @@ export function rootFromInclusionProof(
     console.log('error: length of proof does not match inner + border');
     return null;
   }
+
   let chain: Buffer = chainInner(leafHash, proof.slice(0, inner), leafIndex);
   chain = chainBorderRight(chain, proof.slice(inner));
   return chain;
