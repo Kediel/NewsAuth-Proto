@@ -1,0 +1,14 @@
+{
+  "scripts": {
+    "build": "tsc",
+    "clean": "find . -type f -name '*.js' -delete",
+    "prettier": "prettier --write --single-quote '**/*.ts'",
+    "test": "npm run build && jest"
+  },
+  "devDependencies": {
+    "@types/jest": "^26.0.19"
+  },
+  "dependencies": {
+    "cuint": "^0.2.2"
+  }
+}

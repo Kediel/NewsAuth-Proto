@@ -1,6 +1,7 @@
 package logDatalayer
 
 import (
+  b64 "encoding/base64"
   "context"
   "fmt"
   "os"
@@ -125,6 +126,9 @@ func AddLeaf(ctx context.Context, data []byte) (*trillian.GetInclusionProofByHas
     fmt.Printf("error: failed to get new tree root %d: %v\n", LOG_ID, getNewRootErr)
   }
 
+  sEnc := b64.StdEncoding.EncodeToString(newRoot.RootHash)
+  fmt.Printf("new root: %+v %+v %+v\n", sEnc, leaf.LeafIndex, newRoot.TreeSize)
+
   // 9) Get the inclusion proof from hash
   getProofResp, getProofErr := tc.GetInclusionProofByHash(ctx,
     &trillian.GetInclusionProofByHashRequest{
@@ -135,6 +139,11 @@ func AddLeaf(ctx context.Context, data []byte) (*trillian.GetInclusionProofByHas
   if getProofErr != nil {
     fmt.Printf("error: failed to get new tree root %d: %v\n", LOG_ID, getProofErr)
   }
+
+  //fmt.Printf("LEAF HASH IS: %+v\n", b64.StdEncoding.EncodeToString(leaf.MerkleLeafHash))
+  //merkle.ChainInner(leaf.MerkleLeafHash, getProofResp.Proof[0].Hashes, leaf.LeafIndex)
+  // fmt.Printf("tree: %+v\n", getProofResp.Proof[0].Hashes)
+  fmt.Printf("root hash: %+v\n", b64.StdEncoding.EncodeToString(newRoot.RootHash))
 
   return getProofResp, isDup, nil
 }
