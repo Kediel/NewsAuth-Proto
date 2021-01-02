@@ -2,7 +2,6 @@ package newsController
 
 import (
   b64 "encoding/base64"
-  "crypto/sha256"
   "encoding/json"
   "fmt"
   "net/http"
@@ -88,15 +87,14 @@ func PostNews(ctx *gin.Context) {
     return
   }
 
-  proof, isDup, getProofErr := logDatalayer.AddLeaf(ctx, leafData)
-  if getProofErr != nil {
+  leafIndex, treeSize, proof, rootHash, leafHash, isDup, addLeafErr := logDatalayer.AddLeaf(ctx, leafData)
+  if addLeafErr != nil {
     ctx.JSON(http.StatusInternalServerError, gin.H{})
     ctx.Abort()
     return
   }
 
-  hash := sha256.Sum256(leafData)
-  key := hash[:]
+  key := leafHash[:]
   if (isDup == false) {
     addLeafErr := mapDatalayer.AddLeaf(ctx, key, leafData)
     if addLeafErr != nil {
@@ -112,13 +110,7 @@ func PostNews(ctx *gin.Context) {
     return
   }
 
-  if isDup == true {
-    ctx.JSON(200, gin.H{"ArticleID": key, "proof": proof, "mapLeaf": mapLeaf, "mapRoot": mapRoot})
-    ctx.Abort()
-    return
-  }
-
-  ctx.JSON(201, gin.H{"ArticleID": key, "proof": proof, "mapLeaf": mapLeaf, "mapRoot": mapRoot})
+  ctx.JSON(200, gin.H{"LogProof": proof, "LogLeafIndex": leafIndex, "LogTreeSize": treeSize, "LogRootHash": rootHash, "LogLeafHash": leafHash, "mapLeaf": mapLeaf, "mapRoot": mapRoot})
 }
 
 func PostNewsRevision(ctx *gin.Context) {
@@ -139,8 +131,8 @@ func PostNewsRevision(ctx *gin.Context) {
     return
   }
 
-  proof, isDup, getProofErr := logDatalayer.AddLeaf(ctx, leafData)
-  if getProofErr != nil {
+  _, _, proof, _, _, isDup, addLeafErr := logDatalayer.AddLeaf(ctx, leafData)
+  if addLeafErr != nil {
     ctx.JSON(http.StatusInternalServerError, gin.H{})
     ctx.Abort()
     return

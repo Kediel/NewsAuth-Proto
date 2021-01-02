@@ -3,7 +3,7 @@ package logDatalayer
 import (
   // b64 "encoding/base64"
   "context"
-  "crypto"
+  // "crypto"
   "fmt"
   "os"
   "strconv"
@@ -14,7 +14,6 @@ import (
   "google.golang.org/grpc"
   "google.golang.org/grpc/codes"
   "github.com/google/trillian/merkle"
-
   "github.com/google/trillian/merkle/rfc6962"
 )
 
@@ -62,7 +61,7 @@ func getRoot(c context.Context, tc trillian.TrillianLogClient) (*types.LogRootV1
   return &root, nil
 }
 
-func AddLeaf(ctx context.Context, data []byte) (*trillian.GetInclusionProofByHashResponse, bool, error) {
+func AddLeaf(ctx context.Context, data []byte) (int64, int64, [][]byte, []byte, []byte, bool, error) {
   // 1) initialize some stuff
   LOG_ID, _ := strconv.ParseInt(os.Getenv("LOG_ID"), 10, 64)
   tc, g1, getLogClientErr := getTrillianClient()
@@ -138,15 +137,18 @@ func AddLeaf(ctx context.Context, data []byte) (*trillian.GetInclusionProofByHas
   if getProofErr != nil {
     fmt.Printf("error: failed to get new tree root %d: %v\n", LOG_ID, getProofErr)
   }
+  leafIndex := getProofResp.Proof[0].LeafIndex
+  proof := getProofResp.Proof[0].Hashes
+  treeSize := int64(newRoot.TreeSize)
+  rootHash := newRoot.RootHash
+  leafHash := leaf.MerkleLeafHash
 
-  // 10) verify the inclusion proof TODO: this is failing
-  hasher := rfc6962.New(crypto.SHA256)
-  verifier := merkle.NewLogVerifier(hasher)
-  verifyErr := verifier.VerifyInclusionProof(int64(leaf.LeafIndex), int64(newRoot.TreeSize), getProofResp.Proof[0].Hashes, newRoot.RootHash, leaf.MerkleLeafHash)
+  // 10) verify the inclusion proof
+  verifier := merkle.NewLogVerifier(rfc6962.DefaultHasher)
+  verifyErr := verifier.VerifyInclusionProof(leafIndex, treeSize, proof, rootHash, leafHash)
   if verifyErr != nil {
     fmt.Printf("error: failed to verify inclusion %d: %+v\n", LOG_ID, verifyErr)
   }
-  //fmt.Printf("root, newRoot: %+v %+v\n", root, newRoot)
 
-  return getProofResp, isDup, nil
+  return leafIndex, treeSize, proof, rootHash, leafHash, isDup, nil
 }
