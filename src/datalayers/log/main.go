@@ -113,6 +113,9 @@ func AddLeaf(ctx context.Context, data []byte) (int64, int64, [][]byte, []byte, 
   }
   leafIndex := getProofResp.Proof[0].LeafIndex
   proof := getProofResp.Proof[0].Hashes
+  if leafIndex == 0 {
+    proof = make([][]byte, 0)
+  }
   treeSize := int64(newLogRoot.TreeSize)
   rootHash := newLogRoot.RootHash
   leafHash := logLeaf.MerkleLeafHash

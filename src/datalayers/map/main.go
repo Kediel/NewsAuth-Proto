@@ -54,18 +54,17 @@ func AddLeaf(ctx context.Context, key []byte, data []byte) error {
   // 3) write revision to map
   mapLeaf := trillian.MapLeaf{Index: key, LeafValue: data}
   writeReq := trillian.SetMapLeavesRequest{MapId: MAP_ID, Leaves: []*trillian.MapLeaf{&mapLeaf}, Revision: revisionNum + 1}
-  writeResponse, writeErr := trillianClient.SetLeaves(ctx, &writeReq)
+  _, writeErr := trillianClient.SetLeaves(ctx, &writeReq)
   if writeErr != nil {
     fmt.Printf("error: failed to write map revision %d: %v\n", MAP_ID, writeErr)
     return writeErr
   }
 
   GetLeaf(ctx, key)
-  fmt.Printf("WriteResponse %+v\n", writeResponse)
   return nil
 }
 
-func GetLeaf(ctx context.Context, key []byte) (*trillian.MapLeaf, *types.MapRootV1, error) {
+func GetLeaf(ctx context.Context, key []byte) (bool, []byte, []byte, error) {
   // 1) initialize some stuff
   MAP_ADDRESS := os.Getenv("MAP_ADDRESS")
   MAP_ID, strconvErr := strconv.ParseInt(os.Getenv("MAP_ID"), 10, 64)
@@ -94,10 +93,14 @@ func GetLeaf(ctx context.Context, key []byte) (*trillian.MapLeaf, *types.MapRoot
     fmt.Printf("error: failed to get map client %d: %v\n", MAP_ID, getTreeErr)
   }
   indexes := [][]byte{key}
-  mapLeaf, mapRoot, getAndVerifyErr := mapClient.GetAndVerifyMapLeaves(ctx, indexes)
+  mapLeaf, _, getAndVerifyErr := mapClient.GetAndVerifyMapLeaves(ctx, indexes)
   if getAndVerifyErr != nil {
     fmt.Printf("error: failed to verify map inclusion %d: %v\n", MAP_ID, getAndVerifyErr)
   }
-  fmt.Printf("mapLeaf, mapRoot %+v %+v\n", mapLeaf, mapRoot)
-  return mapLeaf[0], mapRoot, nil
+  isExists := true
+  if mapLeaf[0].LeafValue == nil {
+    isExists = false
+  }
+
+  return isExists, mapLeaf[0].LeafHash, mapLeaf[0].LeafValue, nil
 }
