@@ -11,12 +11,12 @@ export function hashChildren(l: Buffer, r: Buffer): Buffer {
 export function chainInner(
   seed: Buffer,
   proof: Buffer[],
-  leafIndex: number
+  nLeafIndex: number
 ): Buffer {
-  const li: UINT64 = UINT64(leafIndex.toString());
-  proof.forEach((hash: Buffer, index: number): void => {
-    const i: UINT64 = UINT64(index.toString());
-    if (li.shiftRight(i).clone().and(UINT64(1)).equals(UINT64(0))) {
+  proof.forEach((hash: Buffer, nIndex: number): void => {
+    const leafIndex: UINT64 = UINT64(nLeafIndex.toString());
+    const index: UINT64 = UINT64(nIndex.toString());
+    if (leafIndex.shiftRight(index).and(UINT64(1)).equals(UINT64(0))) {
       seed = hashChildren(seed, hash);
     } else {
       seed = hashChildren(hash, seed);

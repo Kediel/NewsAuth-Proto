@@ -78,7 +78,7 @@ test('rootFromInclusionProof - 16 leaves', () => {
   expect(computedRoot.toString('base64')).toEqual(b64RootHash);
 });
 
-test('rootFromInclusionProof - older leaf', () => {
+test('rootFromInclusionProof - 16 older leaf', () => {
   const b64RootHash: string = '48WwwFM+VmnsFOhqKKdZtFLwlNtO9QS7ykivP2Gfjdw=';
   const b64LeafHash: string = 'j0soaRyiUehPSR+PAEUrVeL+SCMuKZP3x9Q71eMuXMI=';
   const b64Proof: string[] = [
@@ -90,6 +90,50 @@ test('rootFromInclusionProof - older leaf', () => {
   const leafHash: Buffer = Buffer.from(b64LeafHash, 'base64');
   const leafIndex = 3;
   const treeSize = 16;
+  const proof: Buffer[] = b64Proof.map((b64Hash: string): Buffer =>
+    Buffer.from(b64Hash, 'base64')
+  );
+  const computedRoot: Buffer = rootFromInclusionProof(
+    leafIndex,
+    treeSize,
+    proof,
+    leafHash
+  );
+  expect(computedRoot.toString('base64')).toEqual(b64RootHash);
+});
+
+test('rootFromInclusionProof - 17', () => {
+  const b64RootHash: string = 'e9lYo8MWUmjpjP75pYTq8Oo2k4NMtScn4y4MUb4LCH0=';
+  const b64LeafHash: string = 'h8p9O7FMp1WhDCvrlhANACSn5ukgMESAyb63nPqCqyo=';
+  const b64Proof: string[] = ['48WwwFM+VmnsFOhqKKdZtFLwlNtO9QS7ykivP2Gfjdw='];
+  const leafHash: Buffer = Buffer.from(b64LeafHash, 'base64');
+  const leafIndex = 16;
+  const treeSize = 17;
+  const proof: Buffer[] = b64Proof.map((b64Hash: string): Buffer =>
+    Buffer.from(b64Hash, 'base64')
+  );
+  const computedRoot: Buffer = rootFromInclusionProof(
+    leafIndex,
+    treeSize,
+    proof,
+    leafHash
+  );
+  expect(computedRoot.toString('base64')).toEqual(b64RootHash);
+});
+
+test('rootFromInclusionProof - 17 older leaf', () => {
+  const b64RootHash: string = 'e9lYo8MWUmjpjP75pYTq8Oo2k4NMtScn4y4MUb4LCH0=';
+  const b64LeafHash: string = 'KPLw8j4oDO4f6hHUw0rhAbqeOb1zu2g5/SV+hOCQeGw=';
+  const b64Proof: string[] = [
+    'Iat5/ZZGiFhqeYbFzMw+5QEnCtWu2rhSJwzTHFwJPM4=',
+    'f6h5C/IhHu/cnE6xt+/4TPcZJf7/Y/jfyr20Y7DEC90=',
+    'GrjCOOtxpqOkLAhJjD2XntqqzJUmrNvgfLXpU0OxYQk=',
+    '6JOfmO/E62fFZTt5u7HomIdUxyjHlLOa5yIH0EmfuOY=',
+    'h8p9O7FMp1WhDCvrlhANACSn5ukgMESAyb63nPqCqyo='
+  ];
+  const leafHash: Buffer = Buffer.from(b64LeafHash, 'base64');
+  const leafIndex = 14;
+  const treeSize = 17;
   const proof: Buffer[] = b64Proof.map((b64Hash: string): Buffer =>
     Buffer.from(b64Hash, 'base64')
   );
