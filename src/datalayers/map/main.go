@@ -9,122 +9,95 @@ import (
   "github.com/google/trillian"
   "github.com/google/trillian/client"
   "github.com/google/trillian/types"
-  "google.golang.org/grpc"
-
   _ "github.com/google/trillian/merkle/coniks"
+
+  "github.com/z-tech/blue/src/datalayers/helpers"
 )
 
-func getAdminClient() (trillian.TrillianAdminClient, *grpc.ClientConn, error) {
-  MAP_ADDRESS := os.Getenv("MAP_ADDRESS")
-  g, dialErr := grpc.Dial(MAP_ADDRESS, grpc.WithInsecure()) // TODO(z-tech): secure this
-  if dialErr != nil {
-    return nil, nil, dialErr
+func getMapRoot(ctx context.Context, mapID int64, trillianClient trillian.TrillianMapClient) (*types.MapRootV1, error) {
+  mapRootRequest := &trillian.GetSignedMapRootRequest{MapId: mapID}
+  mapRootResponse, mapRootRequestErr := trillianClient.GetSignedMapRoot(ctx, mapRootRequest)
+  if mapRootRequestErr != nil {
+    return nil, mapRootRequestErr
   }
-  a := trillian.NewTrillianAdminClient(g)
-  return a, g, nil
-}
-
-func getTrillianClient() (trillian.TrillianMapClient, *grpc.ClientConn, error) {
-  MAP_ADDRESS := os.Getenv("MAP_ADDRESS")
-  g, dialErr := grpc.Dial(MAP_ADDRESS, grpc.WithInsecure()) // TODO(z-tech): secure this
-  if dialErr != nil {
-    return nil, nil, dialErr
-  }
-  tc := trillian.NewTrillianMapClient(g)
-  return tc, g, nil
-}
-
-func getWriterClient(tc trillian.TrillianMapClient, tree *trillian.Tree) (*client.MapClient, error) {
-  wc, newClientFromTreeErr := client.NewMapClientFromTree(tc, tree)
-  if newClientFromTreeErr != nil {
-    return nil, newClientFromTreeErr
-  }
-  return wc, nil
-}
-
-func getRoot(c context.Context, tc trillian.TrillianMapClient) (*types.MapRootV1, error) {
-  MAP_ID, _ := strconv.ParseInt(os.Getenv("MAP_ID"), 10, 64)
-  rootRequest := &trillian.GetSignedMapRootRequest{MapId: MAP_ID}
-  rootResponse, reqErr := tc.GetSignedMapRoot(c, rootRequest)
-  if reqErr != nil {
-    return nil, reqErr
-  }
-  var root types.MapRootV1
-  unmarshalErr := root.UnmarshalBinary(rootResponse.MapRoot.MapRoot)
+  var mapRoot types.MapRootV1
+  unmarshalErr := mapRoot.UnmarshalBinary(mapRootResponse.MapRoot.MapRoot)
   if (unmarshalErr != nil) {
     return nil, unmarshalErr
   }
-  return &root, nil
+  return &mapRoot, nil
 }
 
 func AddLeaf(ctx context.Context, key []byte, data []byte) error {
   // 1) initialize some stuff
-  MAP_ID, _ := strconv.ParseInt(os.Getenv("MAP_ID"), 10, 64)
-  tc, g, getMapClientErr := getTrillianClient()
-  if getMapClientErr != nil {
-    fmt.Printf("error: getTrillianClient() %+v\n", getMapClientErr)
+  MAP_ADDRESS := os.Getenv("MAP_ADDRESS")
+  MAP_ID, strconvErr := strconv.ParseInt(os.Getenv("MAP_ID"), 10, 64)
+  if strconvErr != nil {
+    fmt.Printf("error: unable read map id from environment %+v\n", strconvErr)
   }
-  defer g.Close()
 
-  // 2) get tree root
-  root, getRootErr := getRoot(ctx, tc)
-  if getRootErr != nil {
-    fmt.Printf("error: failed to get tree root %d: %v\n", MAP_ID, getRootErr)
+  // 2) dial grpc connection
+  grpcClientConn, getGRPCClientConnErr := datalayerHelpers.GetGRPCConn(MAP_ADDRESS)
+  if getGRPCClientConnErr != nil {
+    fmt.Printf("error: failed to dial grpcClient in map datalayer %+v\n", getGRPCClientConnErr)
   }
-  revision := int64(root.Revision)
+  defer grpcClientConn.Close()
+
+  // 2) get the tree root
+  trillianClient := trillian.NewTrillianMapClient(grpcClientConn)
+  mapRoot, getMapRootErr := getMapRoot(ctx, MAP_ID, trillianClient)
+  if getMapRootErr != nil {
+    fmt.Printf("error: failed to get map root %d: %v\n", MAP_ID, getMapRootErr)
+  }
+  revisionNum := int64(mapRoot.Revision)
 
   // 3) write revision to map
-  l := trillian.MapLeaf{
-    Index:     key,
-    LeafValue: data,
-  }
-  writeReq := trillian.SetMapLeavesRequest{
-    MapId:  MAP_ID,
-    Leaves: []*trillian.MapLeaf{&l},
-    Revision: int64(revision + 1),
-  }
-  writeResponse, writeErr := tc.SetLeaves(ctx, &writeReq)
+  mapLeaf := trillian.MapLeaf{Index: key, LeafValue: data}
+  writeReq := trillian.SetMapLeavesRequest{MapId: MAP_ID, Leaves: []*trillian.MapLeaf{&mapLeaf}, Revision: revisionNum + 1}
+  writeResponse, writeErr := trillianClient.SetLeaves(ctx, &writeReq)
   if writeErr != nil {
-    fmt.Printf("error: failed to write revision to tree %d: %v\n", MAP_ID, writeErr)
+    fmt.Printf("error: failed to write map revision %d: %v\n", MAP_ID, writeErr)
     return writeErr
   }
 
+  GetLeaf(ctx, key)
   fmt.Printf("WriteResponse %+v\n", writeResponse)
   return nil
 }
 
 func GetLeaf(ctx context.Context, key []byte) (*trillian.MapLeaf, *types.MapRootV1, error) {
   // 1) initialize some stuff
-  MAP_ID, _ := strconv.ParseInt(os.Getenv("MAP_ID"), 10, 64)
-  tc, g1, getMapClientErr := getTrillianClient()
-  if getMapClientErr != nil {
-    fmt.Printf("error: getTrillianClient() %+v\n", getMapClientErr)
+  MAP_ADDRESS := os.Getenv("MAP_ADDRESS")
+  MAP_ID, strconvErr := strconv.ParseInt(os.Getenv("MAP_ID"), 10, 64)
+  if strconvErr != nil {
+    fmt.Printf("error: unable read map id from environment %+v\n", strconvErr)
   }
-  defer g1.Close()
-  ac, g2, getAdminClientErr := getAdminClient()
-  if getAdminClientErr != nil {
-    fmt.Printf("error: getAdminClient() %+v\n", getAdminClientErr)
-  }
-  defer g2.Close()
 
-  // 2) get tree
-  tree, getTreeErr := ac.GetTree(ctx, &trillian.GetTreeRequest{TreeId: MAP_ID})
+  // 2) dial grpc connection
+  grpcClientConn, getGRPCClientConnErr := datalayerHelpers.GetGRPCConn(MAP_ADDRESS)
+  if getGRPCClientConnErr != nil {
+    fmt.Printf("error: failed to dial grpcClient in map datalayer %+v\n", getGRPCClientConnErr)
+  }
+  defer grpcClientConn.Close()
+
+  // 3) get the map tree
+  adminClient := trillian.NewTrillianAdminClient(grpcClientConn)
+  tree, getTreeErr := adminClient.GetTree(ctx, &trillian.GetTreeRequest{TreeId: MAP_ID})
   if getTreeErr != nil {
-    fmt.Printf("error: failed to get tree %d: %v\n", MAP_ID, getTreeErr)
+    fmt.Printf("error: failed to get tree in map datalayer %d: %v\n", MAP_ID, getTreeErr)
   }
 
-  // 3) get client
-  wc, getWriterErr := getWriterClient(tc, tree)
-  if getWriterErr != nil {
-    fmt.Printf("error: failed to get writer client %d: %v\n", MAP_ID, getWriterErr)
+  // 4) get and verify the leaf
+  trillianClient := trillian.NewTrillianMapClient(grpcClientConn)
+  mapClient, getMapClientErr := client.NewMapClientFromTree(trillianClient, tree)
+  if getMapClientErr != nil {
+    fmt.Printf("error: failed to get map client %d: %v\n", MAP_ID, getTreeErr)
   }
-
-  // 4)
   indexes := [][]byte{key}
-  mapLeaf, mapRoot, verifyErr := wc.GetAndVerifyMapLeaves(ctx, indexes)
-  if verifyErr != nil {
-    fmt.Printf("error: failed to verify map inclusion %d: %v\n", MAP_ID, verifyErr)
+  mapLeaf, mapRoot, getAndVerifyErr := mapClient.GetAndVerifyMapLeaves(ctx, indexes)
+  if getAndVerifyErr != nil {
+    fmt.Printf("error: failed to verify map inclusion %d: %v\n", MAP_ID, getAndVerifyErr)
   }
-
-  return mapLeaf[0], mapRoot, verifyErr
+  fmt.Printf("mapLeaf, mapRoot %+v %+v\n", mapLeaf, mapRoot)
+  return mapLeaf[0], mapRoot, nil
 }

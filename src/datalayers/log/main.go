@@ -6,112 +6,79 @@ import (
   "os"
   "strconv"
 
-  "google.golang.org/grpc"
   "google.golang.org/grpc/codes"
   "github.com/google/trillian"
   "github.com/google/trillian/client"
   "github.com/google/trillian/merkle"
   "github.com/google/trillian/merkle/rfc6962"
   "github.com/google/trillian/types"
+
+  "github.com/z-tech/blue/src/datalayers/helpers"
 )
 
-func getAdminClient() (trillian.TrillianAdminClient, *grpc.ClientConn, error) {
-  LOG_ADDRESS := os.Getenv("LOG_ADDRESS")
-  g, dialErr := grpc.Dial(LOG_ADDRESS, grpc.WithInsecure()) // TODO(z-tech): secure this
-  if dialErr != nil {
-    return nil, nil, dialErr
+func getLogRoot(ctx context.Context, logID int64, trillianClient trillian.TrillianLogClient) (*types.LogRootV1, error) {
+  logRootRequest := &trillian.GetLatestSignedLogRootRequest{LogId: logID}
+  logRootResponse, logRootRequestErr := trillianClient.GetLatestSignedLogRoot(ctx, logRootRequest)
+  if logRootRequestErr != nil {
+    return nil, logRootRequestErr
   }
-  a := trillian.NewTrillianAdminClient(g)
-  return a, g, nil
-}
-
-func getTrillianClient() (trillian.TrillianLogClient, *grpc.ClientConn, error) {
-  LOG_ADDRESS := os.Getenv("LOG_ADDRESS")
-  g, dialErr := grpc.Dial(LOG_ADDRESS, grpc.WithInsecure()) // TODO(z-tech): secure this
-  if dialErr != nil {
-    return nil, nil, dialErr
-  }
-  tc := trillian.NewTrillianLogClient(g)
-  return tc, g, nil
-}
-
-func getWriterClient(tc trillian.TrillianLogClient, tree *trillian.Tree, root types.LogRootV1) (*client.LogClient, error) {
-  wc, newClientFromTreeErr := client.NewFromTree(tc, tree, root)
-  if newClientFromTreeErr != nil {
-    return nil, newClientFromTreeErr
-  }
-  return wc, nil
-}
-
-func getRoot(c context.Context, tc trillian.TrillianLogClient) (*types.LogRootV1, error) {
-  LOG_ID, _ := strconv.ParseInt(os.Getenv("LOG_ID"), 10, 64)
-  rootRequest := &trillian.GetLatestSignedLogRootRequest{LogId: LOG_ID}
-  rootResponse, reqErr := tc.GetLatestSignedLogRoot(c, rootRequest)
-  if reqErr != nil {
-    return nil, reqErr
-  }
-
-  var root types.LogRootV1
-  unmarshalErr := root.UnmarshalBinary(rootResponse.SignedLogRoot.LogRoot)
+  var logRoot types.LogRootV1
+  unmarshalErr := logRoot.UnmarshalBinary(logRootResponse.SignedLogRoot.LogRoot)
   if (unmarshalErr != nil) {
     return nil, unmarshalErr
   }
-  return &root, nil
+  return &logRoot, nil
 }
 
 func AddLeaf(ctx context.Context, data []byte) (int64, int64, [][]byte, []byte, []byte, bool, error) {
   // 1) initialize some stuff
-  LOG_ID, _ := strconv.ParseInt(os.Getenv("LOG_ID"), 10, 64)
-  tc, g1, getLogClientErr := getTrillianClient()
-  if getLogClientErr != nil {
-    fmt.Printf("error: getTrillianClient() %+v\n", getLogClientErr)
-    return 0, 0, nil, nil, nil, false, getLogClientErr
+  LOG_ADDRESS := os.Getenv("LOG_ADDRESS")
+  LOG_ID, strconvErr := strconv.ParseInt(os.Getenv("LOG_ID"), 10, 64)
+  if strconvErr != nil {
+    fmt.Printf("error: unable read log id from environment %+v\n", strconvErr)
   }
-  defer g1.Close()
-  ac, g2, getAdminClientErr := getAdminClient()
-  if getAdminClientErr != nil {
-    fmt.Printf("error: getAdminClient() %+v\n", getAdminClientErr)
-    return 0, 0, nil, nil, nil, false, getAdminClientErr
-  }
-  defer g2.Close()
 
-  // 2) get tree
-  tree, getTreeErr := ac.GetTree(ctx, &trillian.GetTreeRequest{TreeId: LOG_ID})
+  // 2) dial grpc connection
+  grpcClientConn, getGRPCClientConnErr := datalayerHelpers.GetGRPCConn(LOG_ADDRESS)
+  if getGRPCClientConnErr != nil {
+    fmt.Printf("error: failed to dial grpcClient in map datalayer %+v\n", getGRPCClientConnErr)
+  }
+  defer grpcClientConn.Close()
+
+  // 3) get tree
+  adminClient := trillian.NewTrillianAdminClient(grpcClientConn)
+  tree, getTreeErr := adminClient.GetTree(ctx, &trillian.GetTreeRequest{TreeId: LOG_ID})
   if getTreeErr != nil {
-    fmt.Printf("error: failed to get tree %d: %v\n", LOG_ID, getTreeErr)
+    fmt.Printf("error: failed to get log tree %d: %v\n", LOG_ID, getTreeErr)
     return 0, 0, nil, nil, nil, false, getTreeErr
   }
 
-  // 3) get tree root
-  root, getRootErr := getRoot(ctx, tc)
-  if getRootErr != nil {
-    fmt.Printf("error: failed to get tree root %d: %v\n", LOG_ID, getRootErr)
-    return 0, 0, nil, nil, nil, false, getRootErr
+  // 4) get log root
+  trillianClient := trillian.NewTrillianLogClient(grpcClientConn)
+  logRoot, getLogRootErr := getLogRoot(ctx, LOG_ID, trillianClient)
+  if getLogRootErr != nil {
+    fmt.Printf("error: failed to get tree root %d: %v\n", LOG_ID, getLogRootErr)
+    return 0, 0, nil, nil, nil, false, getLogRootErr
   }
 
-  // 4) get client (the kind that does QueueLeaves(), naming it "writer client")
-  wc, getWriterErr := getWriterClient(tc, tree, *root)
-  if getWriterErr != nil {
-    fmt.Printf("error: failed to get writer client %d: %v\n", LOG_ID, getWriterErr)
-    return 0, 0, nil, nil, nil, false, getWriterErr
+  // 5) queue the leaf
+  logClient, getLogClientErr := client.NewFromTree(trillianClient, tree, *logRoot)
+  if getLogClientErr != nil {
+    fmt.Printf("error: failed to get log client %d: %v\n", LOG_ID, getLogClientErr)
+    return 0, 0, nil, nil, nil, false, getLogClientErr
   }
-
-  // 5) Queue the leaf
-  leaf := wc.BuildLeaf(data)
-  queueLeafResp, queueLeafErr := tc.QueueLeaf(ctx, &trillian.QueueLeafRequest{
-    LogId: wc.LogID,
-    Leaf:  leaf,
-  })
+  logLeaf := logClient.BuildLeaf(data)
+  queueLeafResp, queueLeafErr := trillianClient.QueueLeaf(ctx, &trillian.QueueLeafRequest{LogId: LOG_ID, Leaf: logLeaf})
   if queueLeafErr != nil {
     fmt.Printf("error: failed to queue leaf %d: %v\n", LOG_ID, queueLeafErr)
     return 0, 0, nil, nil, nil, false, queueLeafErr
   }
 
   // 6) wait for inclusion
-  waitErr := wc.WaitForInclusion(ctx, data)
-  if waitErr != nil {
-    fmt.Printf("error: failed to wait for leaf inclusion %d: %v\n", LOG_ID, waitErr)
-    return 0, 0, nil, nil, nil, false, waitErr
+  inclusionErr := logClient.WaitForInclusion(ctx, data)
+  if inclusionErr != nil {
+    fmt.Printf("error: failed to wait for leaf inclusion %d: %v\n", LOG_ID, inclusionErr)
+    return 0, 0, nil, nil, nil, false, inclusionErr
   }
 
   // 7) Check if dup
@@ -127,18 +94,18 @@ func AddLeaf(ctx context.Context, data []byte) (int64, int64, [][]byte, []byte, 
   }
 
   // 8) get the new tree root
-  newRoot, getNewRootErr := getRoot(ctx, tc)
-  if getNewRootErr != nil {
-    fmt.Printf("error: failed to get new tree root %d: %v\n", LOG_ID, getNewRootErr)
-    return 0, 0, nil, nil, nil, false, getNewRootErr
+  newLogRoot, getNewLogRootErr := getLogRoot(ctx, LOG_ID, trillianClient)
+  if getNewLogRootErr != nil {
+    fmt.Printf("error: failed to get new tree root %d: %v\n", LOG_ID, getNewLogRootErr)
+    return 0, 0, nil, nil, nil, false, getNewLogRootErr
   }
 
   // 9) Get the inclusion proof from hash
-  getProofResp, getProofErr := tc.GetInclusionProofByHash(ctx,
+  getProofResp, getProofErr := trillianClient.GetInclusionProofByHash(ctx,
     &trillian.GetInclusionProofByHashRequest{
       LogId:    LOG_ID,
-      LeafHash: leaf.MerkleLeafHash,
-      TreeSize: int64(newRoot.TreeSize),
+      LeafHash: logLeaf.MerkleLeafHash,
+      TreeSize: int64(newLogRoot.TreeSize),
     })
   if getProofErr != nil {
     fmt.Printf("error: failed to get new tree root %d: %v\n", LOG_ID, getProofErr)
@@ -146,9 +113,9 @@ func AddLeaf(ctx context.Context, data []byte) (int64, int64, [][]byte, []byte, 
   }
   leafIndex := getProofResp.Proof[0].LeafIndex
   proof := getProofResp.Proof[0].Hashes
-  treeSize := int64(newRoot.TreeSize)
-  rootHash := newRoot.RootHash
-  leafHash := leaf.MerkleLeafHash
+  treeSize := int64(newLogRoot.TreeSize)
+  rootHash := newLogRoot.RootHash
+  leafHash := logLeaf.MerkleLeafHash
 
   // 10) verify the inclusion proof
   verifier := merkle.NewLogVerifier(rfc6962.DefaultHasher)

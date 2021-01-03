@@ -13,7 +13,6 @@ import (
   "github.com/z-tech/blue/src/datalayers/map"
 )
 
-// TODO(z-tech): what are the fields we actually want?
 type PostNewsSchema struct {
   ArticleBody string `json:"ArticleBody"`
   Author string `json:"Author"`
@@ -36,20 +35,20 @@ func ValidatePostNews(ctx *gin.Context) {
     ctx.Abort()
     return
   }
-  ctx.Set("postNewsSchema", postNewsSchema)
-
   validateErr := postNewsSchema.Validate()
   if validateErr != nil {
     ctx.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("one or more properties in request body are not valid: %s", validateErr)})
     ctx.Abort()
     return
   }
+  ctx.Set("postNewsSchema", postNewsSchema)
 }
 
 func PostNews(ctx *gin.Context) {
   postNewsSchema, _ := ctx.Get("postNewsSchema")
   leafData, marshalErr := json.Marshal(postNewsSchema)
   if marshalErr != nil {
+    fmt.Println("error: unable to marshal postNewsSchema")
     ctx.JSON(http.StatusInternalServerError, gin.H{})
     ctx.Abort()
     return
@@ -57,6 +56,7 @@ func PostNews(ctx *gin.Context) {
 
   leafIndex, treeSize, proof, rootHash, leafHash, isDup, addLeafErr := logDatalayer.AddLeaf(ctx, leafData)
   if addLeafErr != nil {
+    fmt.Println("error: unable to add leaf to log")
     ctx.JSON(http.StatusInternalServerError, gin.H{})
     ctx.Abort()
     return
