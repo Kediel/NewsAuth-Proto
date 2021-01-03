@@ -16,7 +16,7 @@ export function chainInner(
   const li: UINT64 = UINT64(leafIndex.toString());
   proof.forEach((hash: Buffer, index: number): void => {
     const i: UINT64 = UINT64(index.toString());
-    if (li.shiftRight(i).and(UINT64(1)).equals(UINT64(0))) {
+    if (li.shiftRight(i).clone().and(UINT64(1)).equals(UINT64(0))) {
       seed = hashChildren(seed, hash);
     } else {
       seed = hashChildren(hash, seed);

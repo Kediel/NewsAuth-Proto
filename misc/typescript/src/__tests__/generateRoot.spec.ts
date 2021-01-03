@@ -78,7 +78,6 @@ test('rootFromInclusionProof - 16 leaves', () => {
   expect(computedRoot.toString('base64')).toEqual(b64RootHash);
 });
 
-// TODO: fix
 test('rootFromInclusionProof - older leaf', () => {
   const b64RootHash: string = '48WwwFM+VmnsFOhqKKdZtFLwlNtO9QS7ykivP2Gfjdw=';
   const b64LeafHash: string = 'j0soaRyiUehPSR+PAEUrVeL+SCMuKZP3x9Q71eMuXMI=';

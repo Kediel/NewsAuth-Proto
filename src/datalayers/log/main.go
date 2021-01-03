@@ -1,20 +1,18 @@
 package logDatalayer
 
 import (
-  // b64 "encoding/base64"
   "context"
-  // "crypto"
   "fmt"
   "os"
   "strconv"
 
-  "github.com/google/trillian"
-  "github.com/google/trillian/client"
-  "github.com/google/trillian/types"
   "google.golang.org/grpc"
   "google.golang.org/grpc/codes"
+  "github.com/google/trillian"
+  "github.com/google/trillian/client"
   "github.com/google/trillian/merkle"
   "github.com/google/trillian/merkle/rfc6962"
+  "github.com/google/trillian/types"
 )
 
 func getAdminClient() (trillian.TrillianAdminClient, *grpc.ClientConn, error) {
