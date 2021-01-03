@@ -65,11 +65,13 @@ func AddLeaf(ctx context.Context, data []byte) (int64, int64, [][]byte, []byte, 
   tc, g1, getLogClientErr := getTrillianClient()
   if getLogClientErr != nil {
     fmt.Printf("error: getTrillianClient() %+v\n", getLogClientErr)
+    return 0, 0, nil, nil, nil, false, getLogClientErr
   }
   defer g1.Close()
   ac, g2, getAdminClientErr := getAdminClient()
   if getAdminClientErr != nil {
     fmt.Printf("error: getAdminClient() %+v\n", getAdminClientErr)
+    return 0, 0, nil, nil, nil, false, getAdminClientErr
   }
   defer g2.Close()
 
@@ -77,18 +79,21 @@ func AddLeaf(ctx context.Context, data []byte) (int64, int64, [][]byte, []byte, 
   tree, getTreeErr := ac.GetTree(ctx, &trillian.GetTreeRequest{TreeId: LOG_ID})
   if getTreeErr != nil {
     fmt.Printf("error: failed to get tree %d: %v\n", LOG_ID, getTreeErr)
+    return 0, 0, nil, nil, nil, false, getTreeErr
   }
 
   // 3) get tree root
   root, getRootErr := getRoot(ctx, tc)
   if getRootErr != nil {
     fmt.Printf("error: failed to get tree root %d: %v\n", LOG_ID, getRootErr)
+    return 0, 0, nil, nil, nil, false, getRootErr
   }
 
   // 4) get client (the kind that does QueueLeaves(), naming it "writer client")
   wc, getWriterErr := getWriterClient(tc, tree, *root)
   if getWriterErr != nil {
     fmt.Printf("error: failed to get writer client %d: %v\n", LOG_ID, getWriterErr)
+    return 0, 0, nil, nil, nil, false, getWriterErr
   }
 
   // 5) Queue the leaf
@@ -99,12 +104,14 @@ func AddLeaf(ctx context.Context, data []byte) (int64, int64, [][]byte, []byte, 
   })
   if queueLeafErr != nil {
     fmt.Printf("error: failed to queue leaf %d: %v\n", LOG_ID, queueLeafErr)
+    return 0, 0, nil, nil, nil, false, queueLeafErr
   }
 
   // 6) wait for inclusion
   waitErr := wc.WaitForInclusion(ctx, data)
   if waitErr != nil {
     fmt.Printf("error: failed to wait for leaf inclusion %d: %v\n", LOG_ID, waitErr)
+    return 0, 0, nil, nil, nil, false, waitErr
   }
 
   // 7) Check if dup
@@ -113,9 +120,9 @@ func AddLeaf(ctx context.Context, data []byte) (int64, int64, [][]byte, []byte, 
     respCode := codes.Code(queueLeafResp.QueuedLeaf.Status.Code)
     if respCode != codes.OK && respCode != codes.AlreadyExists {
       fmt.Printf("error: queue leaf status is unsuccessful %d %v\n", LOG_ID, respCode)
+      // TODO: return nil, nil, nil, nil, nil, nil, getNewRootErr
     } else if (respCode != codes.OK && respCode == codes.AlreadyExists) {
       isDup = true
-      fmt.Printf("warn: queued leaf is a duplicate %d %v\n", LOG_ID, respCode)
     }
   }
 
@@ -123,6 +130,7 @@ func AddLeaf(ctx context.Context, data []byte) (int64, int64, [][]byte, []byte, 
   newRoot, getNewRootErr := getRoot(ctx, tc)
   if getNewRootErr != nil {
     fmt.Printf("error: failed to get new tree root %d: %v\n", LOG_ID, getNewRootErr)
+    return 0, 0, nil, nil, nil, false, getNewRootErr
   }
 
   // 9) Get the inclusion proof from hash
@@ -134,6 +142,7 @@ func AddLeaf(ctx context.Context, data []byte) (int64, int64, [][]byte, []byte, 
     })
   if getProofErr != nil {
     fmt.Printf("error: failed to get new tree root %d: %v\n", LOG_ID, getProofErr)
+    return 0, 0, nil, nil, nil, false, getProofErr
   }
   leafIndex := getProofResp.Proof[0].LeafIndex
   proof := getProofResp.Proof[0].Hashes
@@ -146,6 +155,7 @@ func AddLeaf(ctx context.Context, data []byte) (int64, int64, [][]byte, []byte, 
   verifyErr := verifier.VerifyInclusionProof(leafIndex, treeSize, proof, rootHash, leafHash)
   if verifyErr != nil {
     fmt.Printf("error: failed to verify inclusion %d: %+v\n", LOG_ID, verifyErr)
+    return 0, 0, nil, nil, nil, false, verifyErr
   }
 
   return leafIndex, treeSize, proof, rootHash, leafHash, isDup, nil
