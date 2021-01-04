@@ -6,7 +6,7 @@ export function numToUINT64(n: number): UINT64 {
 
 export function getMinNumBits(n: UINT64): number {
   const zero: UINT64 = UINT64(0);
-  if (n.or(zero).equals(zero)) return 0; // n is zero
+  if (n.equals(zero)) return 0; // n is zero
   let mask = UINT64(1);
   let bitsNeeded = 1;
   while (mask.lessThan(n) === true) {
@@ -18,7 +18,7 @@ export function getMinNumBits(n: UINT64): number {
 
 export function getNumSetBits(n: UINT64): number {
   const zero: UINT64 = UINT64(0);
-  if (n.or(zero).equals(zero)) return 0; // n is zero
+  if (n.equals(zero)) return 0; // n is zero
   let bits = 0;
   let mask = UINT64(1);
   for (let i = 0; i < 64; i++) {
