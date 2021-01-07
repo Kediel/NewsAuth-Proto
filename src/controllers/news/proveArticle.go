@@ -1,72 +1,73 @@
 package newsController
 
 import (
-  b64 "encoding/base64"
-  // "encoding/json"
-  // "fmt"
+  "encoding/json"
+  "fmt"
   "net/http"
 
   "github.com/gin-gonic/gin"
   "github.com/gin-gonic/gin/binding"
+  "github.com/google/trillian/merkle/rfc6962"
 
-  // "github.com/z-tech/blue/src/datalayers/log"
-  "github.com/z-tech/blue/src/datalayers/map"
+  "github.com/z-tech/blue/src/datalayers"
+  "github.com/z-tech/blue/src/types"
 )
 
-type ProveArticleData struct {
-  ArticleKey string `json:"ArticleKey"`
-}
-
 func ValidateProveArticle(ctx *gin.Context) {
-  // ValidatePublishArticle(ctx)
-}
-
-func ProveArticle(ctx *gin.Context) {
-  // 1) validate the articleKey
-  proveArticleData := ProveArticleData{}
-  bindErr := ctx.ShouldBindBodyWith(&proveArticleData, binding.JSON)
+  article := types.Article{}
+  bindErr := ctx.ShouldBindBodyWith(&article, binding.JSON)
   if bindErr != nil {
     ctx.JSON(http.StatusBadRequest, gin.H{"error": bindErr.Error()})
     ctx.Abort()
     return
   }
-  articleKey, decodeArticleKeyErr := b64.URLEncoding.DecodeString(proveArticleData.ArticleKey)
-  if decodeArticleKeyErr != nil {
-    ctx.JSON(http.StatusBadRequest, gin.H{"error": decodeArticleKeyErr.Error()})
+  validateErr := article.Validate()
+  if validateErr != nil {
+    ctx.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("one or more properties in request body are not valid: %s", validateErr)})
     ctx.Abort()
     return
   }
-  if len(articleKey) != 32 {
-    ctx.JSON(http.StatusBadRequest, gin.H{"error": "width of ArticleKey must be 32"})
-    ctx.Abort()
-    return
-  }
+  ctx.Set("article", article)
+}
 
-  // 2) get the latest revision of this article from the map
-  isExists, mapLeafHash, mapLeafValue, getLeafErr := mapDatalayer.GetLeaf(ctx, articleKey)
-  if getLeafErr != nil {
+func ProveArticle(ctx *gin.Context) {
+  article, _ := ctx.Get("article")
+  leafData, _ := json.Marshal(article)
+  _, _, mapAddress, mapID, getConfigErr := datalayers.GetConfig()
+  if getConfigErr != nil {
+    fmt.Println("error: unable to read config from env %+v\n", getConfigErr)
     ctx.JSON(http.StatusInternalServerError, gin.H{})
     ctx.Abort()
     return
   }
-  // TODO: prove non-inclusion
-  if isExists != true {
-    ctx.JSON(http.StatusBadRequest, gin.H{"error": "ArticleID does not exist"})
+
+  mapIndex := rfc6962.DefaultHasher.HashLeaf(leafData)
+  isExists, mapLeafHash, mapLeafValue, proof, getMapLeafErr := datalayers.GetMapLeaf(
+    ctx,
+    mapAddress,
+    mapID,
+    mapIndex,
+  )
+  if getMapLeafErr != nil {
+    ctx.JSON(http.StatusInternalServerError, gin.H{})
     ctx.Abort()
     return
   }
 
-  
-
-
-
+  var inclusionProof [][]byte
+  var nonInclusionProof [][]byte
+  if (isExists == true) {
+    inclusionProof = proof
+  } else {
+    nonInclusionProof = proof
+  }
 
   ctx.JSON(200, gin.H{
     // "ArticleKey": leafHash,
     // "ArticleRevisionKey": leafHash,
     // "PreviousArticleRevisionKey": nil,
-    // "InclusionProof": inclusionProof,
-    // "NonInclusionProof": nil,
+    "InclusionProof": inclusionProof,
+    "NonInclusionProof": nonInclusionProof,
     // "LogLeafHash": leafHash,
     // "LogLeafIndex": leafIndex,
     // "LogRootHash": rootHash,

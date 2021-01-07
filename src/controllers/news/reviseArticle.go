@@ -9,8 +9,7 @@ import (
   "github.com/gin-gonic/gin"
   "github.com/gin-gonic/gin/binding"
 
-  // "github.com/z-tech/blue/src/datalayers/log"
-  "github.com/z-tech/blue/src/datalayers/map"
+  "github.com/z-tech/blue/src/datalayers"
 )
 
 type ReviseArticleData struct {
@@ -72,8 +71,14 @@ func ReviseArticle(ctx *gin.Context) {
     return
   }
 
+  _, _, mapAddress, mapID, _ := datalayers.GetConfig()
   // 2) get the latest revision of this article from the map
-  isExists, mapLeafHash, mapLeafValue, getLeafErr := mapDatalayer.GetLeaf(ctx, articleKey)
+  isExists, mapLeafHash, mapLeafValue, proof, getLeafErr := datalayers.GetMapLeaf(
+    ctx,
+    mapAddress,
+    mapID,
+    articleKey,
+  )
   if isExists != true {
     ctx.JSON(http.StatusBadRequest, gin.H{"error": "ArticleID does not exist"})
     ctx.Abort()
@@ -91,7 +96,7 @@ func ReviseArticle(ctx *gin.Context) {
     return
   }
 
-  fmt.Printf("HELLO: %+v %+v %+v %+v\n", leafData, mapLeafValue, mapLeafHash, getLeafErr)
+  fmt.Printf("IGNORE: %+v %+v %+v %+v\n", leafData, mapLeafValue, mapLeafHash, proof, getLeafErr)
   //
   // _, _, proof, _, _, isDup, addLeafErr := logDatalayer.AddLeaf(ctx, leafData)
   // if addLeafErr != nil {
