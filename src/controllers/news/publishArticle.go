@@ -36,7 +36,7 @@ func PublishArticle(ctx *gin.Context) {
   leafData, _ := json.Marshal(article)
   logAddress, logID, mapAddress, mapID, getConfigErr := envDatalayer.GetConfig()
   if getConfigErr != nil {
-    fmt.Println("error: unable to read config from env %+v\n", getConfigErr)
+    fmt.Printf("error: unable to read config from env %v\n", getConfigErr)
     ctx.JSON(http.StatusInternalServerError, gin.H{})
     ctx.Abort()
     return
@@ -44,7 +44,7 @@ func PublishArticle(ctx *gin.Context) {
 
   addLogLeafErr := grpcDatalayer.AddLogLeaf(ctx, logAddress, logID, leafData)
   if addLogLeafErr != nil {
-    fmt.Println("error: unable to add log leaf %+v\n", addLogLeafErr)
+    fmt.Printf("error: unable to add log leaf %v\n", addLogLeafErr)
     ctx.JSON(http.StatusInternalServerError, gin.H{})
     ctx.Abort()
     return

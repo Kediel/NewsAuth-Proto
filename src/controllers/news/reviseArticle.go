@@ -97,7 +97,7 @@ func ReviseArticle(ctx *gin.Context) {
     return
   }
 
-  fmt.Printf("IGNORE: %+v %+v %+v %+v\n", leafData, mapLeafValue, mapLeafHash, proof, getLeafErr)
+  fmt.Printf("IGNORE: %+v %+v %+v %+v %+v\n", leafData, mapLeafValue, mapLeafHash, proof, getLeafErr)
   //
   // _, _, proof, _, _, isDup, addLeafErr := logDatalayer.AddLeaf(ctx, leafData)
   // if addLeafErr != nil {

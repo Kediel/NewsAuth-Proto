@@ -36,7 +36,7 @@ func ProveArticle(ctx *gin.Context) {
   leafData, _ := json.Marshal(article)
   _, _, mapAddress, mapID, getConfigErr := envDatalayer.GetConfig()
   if getConfigErr != nil {
-    fmt.Println("error: unable to read config from env %+v\n", getConfigErr)
+    fmt.Printf("error: unable to read config from env %v\n", getConfigErr)
     ctx.JSON(http.StatusInternalServerError, gin.H{})
     ctx.Abort()
     return
