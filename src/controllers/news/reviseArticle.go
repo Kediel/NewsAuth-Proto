@@ -9,7 +9,8 @@ import (
   "github.com/gin-gonic/gin"
   "github.com/gin-gonic/gin/binding"
 
-  "github.com/z-tech/blue/src/datalayers"
+  "github.com/z-tech/blue/src/datalayers/env"
+  "github.com/z-tech/blue/src/datalayers/grpc"
 )
 
 type ReviseArticleData struct {
@@ -71,9 +72,9 @@ func ReviseArticle(ctx *gin.Context) {
     return
   }
 
-  _, _, mapAddress, mapID, _ := datalayers.GetConfig()
+  _, _, mapAddress, mapID, _ := envDatalayer.GetConfig()
   // 2) get the latest revision of this article from the map
-  isExists, mapLeafHash, mapLeafValue, proof, getLeafErr := datalayers.GetMapLeaf(
+  isExists, mapLeafHash, mapLeafValue, proof, getLeafErr := grpcDatalayer.GetMapLeaf(
     ctx,
     mapAddress,
     mapID,

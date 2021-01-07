@@ -9,7 +9,8 @@ import (
   "github.com/gin-gonic/gin/binding"
   "github.com/google/trillian/merkle/rfc6962"
 
-  "github.com/z-tech/blue/src/datalayers"
+  "github.com/z-tech/blue/src/datalayers/env"
+  "github.com/z-tech/blue/src/datalayers/grpc"
   "github.com/z-tech/blue/src/types"
 )
 
@@ -33,7 +34,7 @@ func ValidateProveArticle(ctx *gin.Context) {
 func ProveArticle(ctx *gin.Context) {
   article, _ := ctx.Get("article")
   leafData, _ := json.Marshal(article)
-  _, _, mapAddress, mapID, getConfigErr := datalayers.GetConfig()
+  _, _, mapAddress, mapID, getConfigErr := envDatalayer.GetConfig()
   if getConfigErr != nil {
     fmt.Println("error: unable to read config from env %+v\n", getConfigErr)
     ctx.JSON(http.StatusInternalServerError, gin.H{})
@@ -42,7 +43,7 @@ func ProveArticle(ctx *gin.Context) {
   }
 
   mapIndex := rfc6962.DefaultHasher.HashLeaf(leafData)
-  isExists, mapLeafHash, mapLeafValue, proof, getMapLeafErr := datalayers.GetMapLeaf(
+  isExists, mapLeafHash, mapLeafValue, proof, getMapLeafErr := grpcDatalayer.GetMapLeaf(
     ctx,
     mapAddress,
     mapID,
