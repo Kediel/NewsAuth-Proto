@@ -23,7 +23,7 @@ function PPP2021_send_post_request($url, $api_token, $data)
             'Authorization: Bearer ' . $api_token
         )
     );
-    $response  = wp_remote_post($url, $args);
+    $response  = wp_remote_post($url . '/v1/proveWordpressPost', $args);
     $http_code = wp_remote_retrieve_response_code($response);
     if ($http_code !== 200) {
         error_log('error: network error posting to verifiable datastructure');

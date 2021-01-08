@@ -85,6 +85,8 @@ func ProvePost(ctx *gin.Context) {
     })
   }
 
-  // TODO: else fetch log inclusion proof, which in combination with the map
-  // noninclusion proof shows the post exists, but is not most current
+  // TODO: if we reach here, the post should exist but is not most current
+  // 1) fetch inclusion proof from trillian log
+  // 2) returning this along w/ noninclusion proof from trillian map shows
+  //    that post exists but is not most current?
 }
