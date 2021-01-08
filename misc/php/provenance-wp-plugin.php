@@ -4,10 +4,10 @@ Plugin Name: Provenance
 Plugin URI: https://github.com/z-tech/blue/tree/main/misc/php
 description: >-
 A plugin to commit post content to verifiable datastructure.
-Version: 1.2
+Version: 0.0.1
 Author: Andrew Zitek
 Author URI: https://github.com/z-tech
-License: TBD
+License: GPLv3
 */
 
 /*
