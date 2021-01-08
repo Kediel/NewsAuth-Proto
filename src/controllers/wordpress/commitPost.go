@@ -1,6 +1,7 @@
-package newsController
+package wordpressController
 
 import (
+  "encoding/binary"
   "encoding/json"
   "fmt"
   "net/http"
@@ -14,26 +15,23 @@ import (
   "github.com/z-tech/blue/src/types"
 )
 
-func ValidatePublishArticle(ctx *gin.Context) {
-  article := types.Article{}
-  bindErr := ctx.ShouldBindBodyWith(&article, binding.JSON)
+func CommitPost(ctx *gin.Context) {
+  // 1) validate some stuff
+  wordpressPost := types.WordpressPost{}
+  bindErr := ctx.ShouldBindBodyWith(&wordpressPost, binding.JSON)
   if bindErr != nil {
     ctx.JSON(http.StatusBadRequest, gin.H{"error": bindErr.Error()})
     ctx.Abort()
     return
   }
-  validateErr := article.Validate()
+  validateErr := wordpressPost.Validate()
   if validateErr != nil {
     ctx.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("one or more properties in request body are not valid: %s", validateErr)})
     ctx.Abort()
     return
   }
-  ctx.Set("article", article)
-}
 
-func PublishArticle(ctx *gin.Context) {
-  article, _ := ctx.Get("article")
-  leafData, _ := json.Marshal(article)
+  // 2) get some config
   logAddress, logID, mapAddress, mapID, getConfigErr := envDatalayer.GetConfig()
   if getConfigErr != nil {
     fmt.Printf("error: unable to read config from env %v\n", getConfigErr)
@@ -42,6 +40,13 @@ func PublishArticle(ctx *gin.Context) {
     return
   }
 
+  // 3) add leaf to log
+  leafData, marshalErr := json.Marshal(wordpressPost.Data)
+  if marshalErr != nil {
+    ctx.JSON(http.StatusBadRequest, gin.H{"error": bindErr.Error()})
+    ctx.Abort()
+    return
+  }
   addLogLeafErr := grpcDatalayer.AddLogLeaf(ctx, logAddress, logID, leafData)
   if addLogLeafErr != nil {
     fmt.Printf("error: unable to add log leaf %v\n", addLogLeafErr)
@@ -50,7 +55,10 @@ func PublishArticle(ctx *gin.Context) {
     return
   }
 
-  mapIndex := rfc6962.DefaultHasher.HashLeaf(leafData)
+  // 4) add leaf to map
+  buf := make([]byte, 8)
+  binary.LittleEndian.PutUint64(buf, wordpressPost.ID)
+  mapIndex := rfc6962.DefaultHasher.HashLeaf(buf)
   addMapLeafErr := grpcDatalayer.AddMapLeaf(ctx, mapAddress, mapID, mapIndex, leafData)
   if addMapLeafErr != nil {
     ctx.JSON(http.StatusInternalServerError, gin.H{})

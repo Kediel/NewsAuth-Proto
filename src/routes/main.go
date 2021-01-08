@@ -4,10 +4,10 @@ import (
   "github.com/gin-gonic/gin"
 
   "github.com/z-tech/blue/src/routes/health"
-  "github.com/z-tech/blue/src/routes/news"
+  "github.com/z-tech/blue/src/routes/wordpress"
 )
 
 func ApplyAllToEngine(engine *gin.Engine) {
   healthRoutes.ApplyToEngine(engine)
-  newsRoutes.ApplyToEngine(engine)
+  wordpressRoutes.ApplyToEngine(engine)
 }

@@ -2,10 +2,8 @@ package grpcDatalayer
 
 import (
   "context"
-  // "errors"
   "fmt"
 
-  // "google.golang.org/grpc/codes"
   "github.com/google/trillian"
   "github.com/google/trillian/client"
   "github.com/google/trillian/merkle"
