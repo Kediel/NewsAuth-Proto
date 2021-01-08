@@ -1,23 +1,27 @@
-participant Editor
+participant User
 participant CMS
 participant Client
-participant Log Server
 participant Map Server
+participant Log Server
 participant MySQL
-Title: Flow 2. Editor publishes revision of existing news
-Editor->CMS: presses republish
-CMS->Client: POST /v1/news/Revision
-Client->Client: logKey = sha256(newContent)
-Client->Client: mapKey = ArticleID = sha256(oldContent)
-Client->Log Server: addLogLeaf(logKey, newContent)
-Log Server->MySQL: write
-MySQL-->Log Server: ok
-Log Server-->Client: proof, isDup
-Note right of Client: if isDup=false
-Client->Map Server: addMapLeaf(mapKey, newContent)
-Map Server->MySQL: write
-MySQL-->Map Server: ok
-Map Server-->Client: ok
+Title: Flow 2. User loads Wordpress Post and CMS verifies proofs for inclusion and freshness
+User->CMS: loads wordpress post
+CMS->Client: POST /v1/news/proveWordpressPost (ID, Data)
+Client->Map Server: getMapLeaf(ID)
+Map Server->MySQL: read
+MySQL-->Map Server: data
+Map Server-->Client: mapLeaf | nil
+Note right of Client: if mapLeaf == nil
+Client-->CMS: map proves noninclusion
+CMS-->User: warning
+Note right of Client: elseif mapLeaf.Data == Data
+Client-->CMS: map proves both inclusion and freshness
+CMS-->User: success
+Note right of Client: else
+Client->Log Server: getLogLeaf(Data)
+Log Server->MySQL: read
+MySQL-->Log Server: data
+Log Server-->Client: logLeaf | nil
+Client-->CMS: log proves inclusion, map unfreshness
+CMS-->User: warning
 Note right of Client: endif
-Client-->CMS: proof
-CMS-->Editor: republish success
