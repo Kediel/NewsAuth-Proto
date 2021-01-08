@@ -1,33 +1,15 @@
 <?php
 /*
-Example value of $post:
-{
-  "ID": 5,
-  "post_author": "1",
-  "post_author_display_name": "newsadmin",
-  "post_date": "2021-01-08 02:22:08",
-  "post_date_gmt": "2021-01-08 02:22:08",
-  "post_content": "<!-- wp:paragraph -->\n<p>Every month, the archival institutions of this nation unleash tiny particles of the past in a frenzy of online revelry.</p>\n<!-- /wp:paragraph -->\n\n<!-- wp:paragraph -->\n<p>Is there room in your mind for unuseful details? Or, would you make some, despite long odds the material could one day prove practicable?</p>\n<!-- /wp:paragraph -->",
-  "post_title": "The Record Keepers’ Rave",
-  "post_excerpt": "",
-  "post_status": "publish",
-  "comment_status": "open",
-  "ping_status": "open",
-  "post_password": "",
-  "post_name": "the-record-keepers-rave",
-  "to_ping": "",
-  "pinged": "",
-  "post_modified": "2021-01-08 02:48:54",
-  "post_modified_gmt": "2021-01-08 02:48:54",
-  "post_content_filtered": "",
-  "post_parent": 0,
-  "guid": "http://newsprovenance.kinsta.cloud/?p=5",
-  "menu_order": 0,
-  "post_type": "post",
-  "post_mime_type": "",
-  "comment_count": "0",
-  "filter": "raw"
-}
+Contributors: alz236
+Description: A plugin to commit post content to a verifiable datastructure
+License: GPLv2 or later
+Plugin Name: Post Provenance Project
+Plugin URI: https://github.com/z-tech/blue/tree/main/misc/php
+Requires at least: 4.6
+Requires PHP: 7.4
+Stable tag: 0.0.1
+Tested up to: 5.6
+Version: 0.0.1
 */
 
 function send_post_request($url, $token, $data)
@@ -59,7 +41,7 @@ function commit_post_transition($new_status, $old_status, $post_id)
     return;
   }
 
-  $post = get_post($post_id); // example above
+  $post = get_post($post_id); // example below
   if (is_null($post))
   {
     error_log('error: $post is null, unable to commit post transition to verifiable datastructure');
@@ -86,4 +68,35 @@ function commit_post_transition($new_status, $old_status, $post_id)
 }
 
 add_action('transition_post_status', 'commit_post_transition', 10, 3);
+
+/*
+Example value of $post:
+{
+  "ID": 5,
+  "post_author": "1",
+  "post_author_display_name": "newsadmin",
+  "post_date": "2021-01-08 02:22:08",
+  "post_date_gmt": "2021-01-08 02:22:08",
+  "post_content": "<!-- wp:paragraph -->\n<p>Every month, the archival institutions of this nation unleash tiny particles of the past in a frenzy of online revelry.</p>\n<!-- /wp:paragraph -->\n\n<!-- wp:paragraph -->\n<p>Is there room in your mind for unuseful details? Or, would you make some, despite long odds the material could one day prove practicable?</p>\n<!-- /wp:paragraph -->",
+  "post_title": "The Record Keepers’ Rave",
+  "post_excerpt": "",
+  "post_status": "publish",
+  "comment_status": "open",
+  "ping_status": "open",
+  "post_password": "",
+  "post_name": "the-record-keepers-rave",
+  "to_ping": "",
+  "pinged": "",
+  "post_modified": "2021-01-08 02:48:54",
+  "post_modified_gmt": "2021-01-08 02:48:54",
+  "post_content_filtered": "",
+  "post_parent": 0,
+  "guid": "http://newsprovenance.kinsta.cloud/?p=5",
+  "menu_order": 0,
+  "post_type": "post",
+  "post_mime_type": "",
+  "comment_count": "0",
+  "filter": "raw"
+}
+*/
 ?>
