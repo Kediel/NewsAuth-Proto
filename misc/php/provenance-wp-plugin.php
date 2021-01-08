@@ -41,7 +41,7 @@ Example value of $post:
 }
 */
 
-function send_post_request($url, $data, $token)
+function send_post_request($url, $token, $data)
 {
   $ch = curl_init($url);
   $jsonDataEncoded = json_encode($data);
@@ -83,17 +83,17 @@ function commit_post_transition($new_status, $old_status, $post_id)
     $post->post_author_display_name = get_the_author_meta('display_name', $post->post_author);
   }
 
-  if (is_null($VD_API_ADDRESS) || $VD_API_ADDRESS == 'FILL_THIS_VALUE' || is_null($VD_API_KEY) || $VD_API_KEY == 'FILL_THIS_VALUE')
+  if (base64_encode($VD_API_ADDRESS) === 'RklMTF9USElTX1ZBTFVF' || base64_encode($VD_API_KEY) === 'RklMTF9USElTX1ZBTFVF')
   {
     error_log('error: both $VD_API_ADDRESS and $VD_API_KEY must be set');
     return;
   }
 
-  $data = array(
+  $json_data = array(
     'PostID' => $post->ID,
     'Post' => $post
   );
-  send_post_request($VD_API_ADDRESS, $data, $VD_API_KEY);
+  send_post_request($VD_API_ADDRESS, $VD_API_KEY, $json_data);
 }
 
 add_action('transition_post_status', 'commit_post_transition', 10, 3);
