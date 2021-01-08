@@ -1,16 +1,5 @@
 <?php
 /*
-Plugin Name: Provenance
-Plugin URI: https://github.com/z-tech/blue/tree/main/misc/php
-description: >-
-A plugin to commit post content to verifiable datastructure.
-Version: 0.0.1
-Author: Andrew Zitek
-Author URI: https://github.com/z-tech
-License: GPLv3
-*/
-
-/*
 Example value of $post:
 {
   "ID": 5,

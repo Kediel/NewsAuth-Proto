@@ -1,7 +1,9 @@
 === Provenance ===
 Contributors: alz236
-Version: 0.0.1
 License: GPLv3
+Stable tag: 0.0.1
+Tested up to: 5.6
+Version: 0.0.1
 
 == Description ==
 
