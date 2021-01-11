@@ -6,7 +6,7 @@ License: GPLv2 or later
 Plugin Name: Post Provenance Project
 Plugin URI: https://github.com/z-tech/blue/tree/main/misc/php
 Requires at least: 4.6
-Requires PHP: 7.3
+Requires PHP: 7.2
 Stable tag: 0.0.1
 Tested up to: 5.6
 Version: 0.0.1
