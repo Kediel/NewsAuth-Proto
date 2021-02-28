@@ -53,21 +53,21 @@ func AddMapLeaf(ctx context.Context, mapAddress string, mapID int64, key []byte,
 }
 
 func GetMapLeaf(ctx context.Context, mapAddress string, mapID int64, key []byte) (bool, []byte, []byte, [][]byte, error) {
-  // 2) dial grpc connection
+  // 1) dial grpc connection
   grpcClientConn, getGRPCClientConnErr := GetGRPCConn(mapAddress)
   if getGRPCClientConnErr != nil {
     fmt.Printf("error: failed to dial grpcClient in map datalayer %+v\n", getGRPCClientConnErr)
   }
   defer grpcClientConn.Close()
 
-  // 3) get the map tree
+  // 2) get the map tree
   adminClient := trillian.NewTrillianAdminClient(grpcClientConn)
   tree, getTreeErr := adminClient.GetTree(ctx, &trillian.GetTreeRequest{TreeId: mapID})
   if getTreeErr != nil {
     fmt.Printf("error: failed to get tree in map datalayer %d: %v\n", mapID, getTreeErr)
   }
 
-  // 4) get and verify the leaf
+  // 3) get and verify the leaf
   trillianClient := trillian.NewTrillianMapClient(grpcClientConn)
   mapClient, getMapClientErr := client.NewMapClientFromTree(trillianClient, tree)
   if getMapClientErr != nil {
@@ -79,7 +79,7 @@ func GetMapLeaf(ctx context.Context, mapAddress string, mapID int64, key []byte)
     fmt.Printf("error: failed to verify map inclusion %d: %v\n", mapID, getAndVerifyErr)
   }
 
-  // 5) get proof
+  // 4) get proof
   getLeavesResp, _ := mapClient.Conn.GetLeaves(ctx, &trillian.GetMapLeavesRequest{
     MapId: mapID,
     Index: indexes,

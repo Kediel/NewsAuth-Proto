@@ -33,7 +33,7 @@ func ProvePost(ctx *gin.Context) {
   }
 
   // 2) get some config
-  _, _, mapAddress, mapID, getConfigErr := envDatalayer.GetConfig()
+  logAddress, logID, mapAddress, mapID, getConfigErr := envDatalayer.GetConfig()
   if getConfigErr != nil {
     fmt.Printf("error: unable to read config from env %v\n", getConfigErr)
     ctx.JSON(http.StatusInternalServerError, gin.H{})
@@ -60,7 +60,7 @@ func ProvePost(ctx *gin.Context) {
   // 4) potentially return with proof of noninclusion
   if (isExists == false) {
     ctx.JSON(200, gin.H{
-      "IsExists": false,
+      "IsIncluded": false,
       "IsMostCurrent": false,
       "InclusionProof": nil,
       "NonInclusionProof": proof,
@@ -78,15 +78,40 @@ func ProvePost(ctx *gin.Context) {
   }
   if (reflect.DeepEqual(leafData, mapLeafValue)) {
     ctx.JSON(200, gin.H{
-      "IsExists": true,
+      "IsIncluded": true,
       "IsMostCurrent": true,
       "InclusionProof": proof,
       "NonInclusionProof": nil,
     })
+    return
   }
 
-  // TODO: if we reach here, the post should exist but is not most current
-  // 1) fetch inclusion proof from trillian log
-  // 2) returning this along w/ noninclusion proof from trillian map shows
-  //    that post exists but is not most current?
+  // 6) get proof from log
+  leafIndex, _, _, _, _, getLogLeafErr := grpcDatalayer.GetLogLeaf(
+    ctx,
+    logAddress,
+    logID,
+    leafData,
+  )
+  if getLogLeafErr != nil {
+    ctx.JSON(http.StatusInternalServerError, gin.H{})
+    ctx.Abort()
+    return
+  }
+  if (leafIndex == -1) { // this is a bogus version of this article
+    ctx.JSON(200, gin.H{
+      "IsIncluded": false,
+      "IsMostCurrent": false,
+      "InclusionProof": nil,
+      "NonInclusionProof": proof,
+    })
+    return
+  }
+
+  ctx.JSON(200, gin.H{ // this is a genuine version, but is outdated
+    "IsIncluded": true,
+    "IsMostCurrent": false,
+    "InclusionProof": nil,
+    "NonInclusionProof": proof,
+  })
 }

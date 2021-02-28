@@ -70,18 +70,6 @@ func AddLogLeaf(ctx context.Context, logAddress string, logID int64, data []byte
     return inclusionErr
   }
 
-  // 7) Check if dup
-  // isDup := false
-  // if queueLeafResp.QueuedLeaf.Status != nil { // not sure why status missing for new leaves
-  //   respCode := codes.Code(queueLeafResp.QueuedLeaf.Status.Code)
-  //   if respCode != codes.OK && respCode != codes.AlreadyExists {
-  //     fmt.Printf("error: queue leaf status is unsuccessful %d %v\n", logID, respCode)
-  //     return errors.New("response code from trillian log unsuccessful")
-  //   } else if (respCode != codes.OK && respCode == codes.AlreadyExists) {
-  //     isDup = true
-  //   }
-  // }
-
   return nil
 }
 
@@ -108,6 +96,8 @@ func GetLogLeaf(ctx context.Context, logAddress string, logID int64, data []byte
     fmt.Printf("error: failed to get tree root %d: %v\n", logID, getLogRootErr)
     return 0, 0, nil, nil, nil, getLogRootErr
   }
+  treeSize := int64(logRoot.TreeSize)
+  rootHash := logRoot.RootHash
 
   // 4) build leaf
   logClient, getLogClientErr := client.NewFromTree(trillianClient, tree, *logRoot)
@@ -116,26 +106,24 @@ func GetLogLeaf(ctx context.Context, logAddress string, logID int64, data []byte
     return 0, 0, nil, nil, nil, getLogClientErr
   }
   logLeaf := logClient.BuildLeaf(data)
+  leafHash := logLeaf.MerkleLeafHash
 
-  // 5) get inclusion proof from the leaf
+  // 5) get inclusion proof from the leaf, return if not exists
   getProofResp, getProofErr := trillianClient.GetInclusionProofByHash(ctx,
     &trillian.GetInclusionProofByHashRequest{
       LogId:    logID,
       LeafHash: logLeaf.MerkleLeafHash,
-      TreeSize: int64(logRoot.TreeSize),
+      TreeSize: treeSize,
     })
   if getProofErr != nil {
-    fmt.Printf("error: failed to get new tree root %d: %v\n", logID, getProofErr)
-    return 0, 0, nil, nil, nil, getProofErr
+    // NOT SO MUCH AN ERROR: there is no proof for this hash, meaning it's not in the log
+    return -1, treeSize, nil, rootHash, leafHash, nil
   }
   leafIndex := getProofResp.Proof[0].LeafIndex
   proof := getProofResp.Proof[0].Hashes
   if leafIndex == 0 {
     proof = make([][]byte, 0)
   }
-  treeSize := int64(logRoot.TreeSize)
-  rootHash := logRoot.RootHash
-  leafHash := logLeaf.MerkleLeafHash
 
   // 6) verify the inclusion proof
   verifier := merkle.NewLogVerifier(rfc6962.DefaultHasher)

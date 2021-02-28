@@ -61,6 +61,7 @@ func CommitPost(ctx *gin.Context) {
   mapIndex := rfc6962.DefaultHasher.HashLeaf(buf)
   addMapLeafErr := grpcDatalayer.AddMapLeaf(ctx, mapAddress, mapID, mapIndex, leafData)
   if addMapLeafErr != nil {
+    fmt.Printf("error: unable to add map leaf %v\n", addMapLeafErr)
     ctx.JSON(http.StatusInternalServerError, gin.H{})
     ctx.Abort()
     return
