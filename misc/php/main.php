@@ -145,15 +145,15 @@ function PPP2021_commit_post_transition($new_status, $old_status, $post_id)
         $post->post_author_display_name = get_the_author_meta('display_name', $post->post_author);
     }
 
-	$api_adress = get_option('PPP2021_provenance_api_url');
-	$api_key = get_option('PPP2021_provenance_api_key');
+    $api_adress = get_option('PPP2021_provenance_api_url');
+    $api_key = get_option('PPP2021_provenance_api_key');
     if (is_null($api_adress) || is_null($api_key)) {
         return;
     }
 
     $json_data = array(
         'ID' => $post->ID,
-        'Data' => json_encode($post)
+        'Data' => hash('sha256', json_encode($post))
     );
     PPP2021_send_post_request($api_adress, $api_key, $json_data);
 }
