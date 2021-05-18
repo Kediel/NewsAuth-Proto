@@ -45,7 +45,7 @@ func ProvePost(ctx *gin.Context) {
   buf := make([]byte, 8)
   binary.LittleEndian.PutUint64(buf, wordpressPost.ID)
   mapIndex := rfc6962.DefaultHasher.HashLeaf(buf)
-  isExists, _, mapLeafValue, proof, getMapLeafErr := grpcDatalayer.GetMapLeaf(
+  isIndexSetInMap, _, mapLeafValue, mapProof, getMapLeafErr := grpcDatalayer.GetMapLeaf(
     ctx,
     mapAddress,
     mapID,
@@ -57,37 +57,14 @@ func ProvePost(ctx *gin.Context) {
     return
   }
 
-  // 4) potentially return with proof of noninclusion
-  if (isExists == false) {
-    ctx.JSON(200, gin.H{
-      "IsIncluded": false,
-      "IsMostCurrent": false,
-      "InclusionProof": nil,
-      "NonInclusionProof": proof,
-    })
-    ctx.Abort()
-    return
-  }
-
-  // 5) check if most fresh and potentially return
+  // 4) get proof from log
   leafData, marshalErr := json.Marshal(wordpressPost.Data)
   if marshalErr != nil {
     ctx.JSON(http.StatusBadRequest, gin.H{"error": bindErr.Error()})
     ctx.Abort()
     return
   }
-  if (reflect.DeepEqual(leafData, mapLeafValue)) {
-    ctx.JSON(200, gin.H{
-      "IsIncluded": true,
-      "IsMostCurrent": true,
-      "InclusionProof": proof,
-      "NonInclusionProof": nil,
-    })
-    return
-  }
-
-  // 6) get proof from log
-  leafIndex, _, _, _, _, getLogLeafErr := grpcDatalayer.GetLogLeaf(
+  leafIndex, _, logProof, _, _, getLogLeafErr := grpcDatalayer.GetLogLeaf(
     ctx,
     logAddress,
     logID,
@@ -98,20 +75,52 @@ func ProvePost(ctx *gin.Context) {
     ctx.Abort()
     return
   }
-  if (leafIndex == -1) { // this is a bogus version of this article
+
+  // 5) returns
+
+  // 5a) this index is not set in the map, so, not included
+  if (isIndexSetInMap == false) {
     ctx.JSON(200, gin.H{
       "IsIncluded": false,
       "IsMostCurrent": false,
-      "InclusionProof": nil,
-      "NonInclusionProof": proof,
+      "LogInclusionProof": logProof,
+      "MapInclusionProof": nil,
+      "MapNonInclusionProof": mapProof,
+    })
+    ctx.Abort()
+    return
+  }
+
+  // 5b) the value at this index of the map is this value, so, fresh and included
+  if (reflect.DeepEqual(leafData, mapLeafValue)) {
+    ctx.JSON(200, gin.H{
+      "IsIncluded": true,
+      "IsMostCurrent": true,
+      "LogInclusionProof": logProof,
+      "MapInclusionProof": mapProof,
+      "MapNonInclusionProof": nil,
     })
     return
   }
 
-  ctx.JSON(200, gin.H{ // this is a genuine version, but is outdated
+  // 5c) this index is set, but not with this value, and never with this value, perhaps a spoof
+  if (leafIndex == -1) {
+    ctx.JSON(200, gin.H{
+      "IsIncluded": false,
+      "IsMostCurrent": false,
+      "LogInclusionProof": logProof,
+      "MapInclusionProof": nil,
+      "MapNonInclusionProof": mapProof,
+    })
+    return
+  }
+
+  // 5d) this is a genuine version, but is outdated
+  ctx.JSON(200, gin.H{
     "IsIncluded": true,
     "IsMostCurrent": false,
-    "InclusionProof": nil,
-    "NonInclusionProof": proof,
+    "LogInclusionProof": logProof,
+    "MapInclusionProof": nil,
+    "MapNonInclusionProof": mapProof,
   })
 }

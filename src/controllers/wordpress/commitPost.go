@@ -41,13 +41,13 @@ func CommitPost(ctx *gin.Context) {
   }
 
   // 3) add leaf to log
-  leafData, marshalErr := json.Marshal(wordpressPost.Data)
-  if marshalErr != nil {
+  logLeafData, logLeafMarshalErr := json.Marshal(wordpressPost) // { id: <id>, data: <data> }
+  if logLeafMarshalErr != nil {
     ctx.JSON(http.StatusBadRequest, gin.H{"error": bindErr.Error()})
     ctx.Abort()
     return
   }
-  addLogLeafErr := grpcDatalayer.AddLogLeaf(ctx, logAddress, logID, leafData)
+  addLogLeafErr := grpcDatalayer.AddLogLeaf(ctx, logAddress, logID, logLeafData)
   if addLogLeafErr != nil {
     fmt.Printf("error: unable to add log leaf %v\n", addLogLeafErr)
     ctx.JSON(http.StatusInternalServerError, gin.H{})
@@ -59,7 +59,13 @@ func CommitPost(ctx *gin.Context) {
   buf := make([]byte, 8)
   binary.LittleEndian.PutUint64(buf, wordpressPost.ID)
   mapIndex := rfc6962.DefaultHasher.HashLeaf(buf)
-  addMapLeafErr := grpcDatalayer.AddMapLeaf(ctx, mapAddress, mapID, mapIndex, leafData)
+  mapLeafData, mapLeafMarshalErr := json.Marshal(wordpressPost.Data) // level down from logLeafData
+  if mapLeafMarshalErr != nil {
+    ctx.JSON(http.StatusBadRequest, gin.H{"error": bindErr.Error()})
+    ctx.Abort()
+    return
+  }
+  addMapLeafErr := grpcDatalayer.AddMapLeaf(ctx, mapAddress, mapID, mapIndex, mapLeafData)
   if addMapLeafErr != nil {
     fmt.Printf("error: unable to add map leaf %v\n", addMapLeafErr)
     ctx.JSON(http.StatusInternalServerError, gin.H{})
