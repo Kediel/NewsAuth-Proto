@@ -160,7 +160,7 @@ test('live', () => {
     "ckyyc8VhBBLzgbjtnNznkIjx6FY7Ua/Qycigbw8m3rw="
   ];
   const leafHash: Buffer = Buffer.from(b64LeafHash, 'base64');
-  const leafIndex = 224;
+  const leafIndex = 223;
   const treeSize = 225;
   const proof: Buffer[] = b64Proof.map((b64Hash: string): Buffer =>
     Buffer.from(b64Hash, 'base64')
