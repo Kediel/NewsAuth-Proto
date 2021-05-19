@@ -25,6 +25,25 @@ func getLogRoot(ctx context.Context, logID int64, trillianClient trillian.Trilli
   return &logRoot, nil
 }
 
+func GetLogRoot(ctx context.Context, logAddress string, logID int64) (*types.LogRootV1, error) {
+  // 1) dial grpc connection
+  grpcClientConn, getGRPCClientConnErr := GetGRPCConn(logAddress)
+  if getGRPCClientConnErr != nil {
+    fmt.Printf("error: failed to dial grpcClient in map datalayer %d: %v\n", logID, getGRPCClientConnErr)
+    return nil, getGRPCClientConnErr
+  }
+  defer grpcClientConn.Close()
+
+  // 2) get the log root
+  trillianClient := trillian.NewTrillianLogClient(grpcClientConn)
+  logRoot, getLogRootErr := getLogRoot(ctx, logID, trillianClient)
+  if getLogRootErr != nil {
+    fmt.Printf("error: failed to get tree root %d: %v\n", logID, getLogRootErr)
+    return nil, getLogRootErr
+  }
+  return logRoot, nil
+}
+
 func AddLogLeaf(ctx context.Context, logAddress string, logID int64, data []byte) error {
   // 1) dial grpc connection
   grpcClientConn, getGRPCClientConnErr := GetGRPCConn(logAddress)

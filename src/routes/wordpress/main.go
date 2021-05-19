@@ -7,6 +7,7 @@ import (
 )
 
 func ApplyToEngine(engine *gin.Engine) {
+  engine.GET("/v1/getTreeRoots", wordpressController.TreeRoots)
   engine.POST("/v1/commitWordpressPost", wordpressController.CommitPost)
   engine.POST("/v1/proveWordpressPost", wordpressController.ProvePost)
 }

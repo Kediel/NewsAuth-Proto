@@ -24,6 +24,25 @@ func getMapRoot(ctx context.Context, mapID int64, trillianClient trillian.Trilli
   return &mapRoot, nil
 }
 
+func GetMapRoot(ctx context.Context, mapAddress string, mapID int64) (*types.MapRootV1, error) {
+  // 1) dial grpc connection
+  grpcClientConn, getGRPCClientConnErr := GetGRPCConn(mapAddress)
+  if getGRPCClientConnErr != nil {
+    fmt.Printf("error: failed to dial grpcClient in map datalayer %+v\n", getGRPCClientConnErr)
+    return nil, getGRPCClientConnErr
+  }
+  defer grpcClientConn.Close()
+
+  // 2) get the tree root
+  trillianClient := trillian.NewTrillianMapClient(grpcClientConn)
+  mapRoot, getMapRootErr := getMapRoot(ctx, mapID, trillianClient)
+  if getMapRootErr != nil {
+    fmt.Printf("error: failed to get map root %d: %v\n", mapID, getMapRootErr)
+    return nil, getMapRootErr
+  }
+  return mapRoot, nil
+}
+
 func AddMapLeaf(ctx context.Context, mapAddress string, mapID int64, key []byte, data []byte) error {
   // 1) dial grpc connection
   grpcClientConn, getGRPCClientConnErr := GetGRPCConn(mapAddress)
