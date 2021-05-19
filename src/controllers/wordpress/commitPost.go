@@ -59,12 +59,7 @@ func CommitPost(ctx *gin.Context) {
   buf := make([]byte, 8)
   binary.LittleEndian.PutUint64(buf, wordpressPost.ID)
   mapIndex := rfc6962.DefaultHasher.HashLeaf(buf)
-  mapLeafData, mapLeafMarshalErr := json.Marshal(wordpressPost.Data) // level down from logLeafData
-  if mapLeafMarshalErr != nil {
-    ctx.JSON(http.StatusBadRequest, gin.H{"error": bindErr.Error()})
-    ctx.Abort()
-    return
-  }
+  mapLeafData := []byte(wordpressPost.Data) // level down from logLeafData
   addMapLeafErr := grpcDatalayer.AddMapLeaf(ctx, mapAddress, mapID, mapIndex, mapLeafData)
   if addMapLeafErr != nil {
     fmt.Printf("error: unable to add map leaf %v\n", addMapLeafErr)

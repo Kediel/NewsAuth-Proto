@@ -58,7 +58,7 @@ func ProvePost(ctx *gin.Context) {
   }
 
   // 4) get proof from log
-  leafData, marshalErr := json.Marshal(wordpressPost.Data)
+  leafData, marshalErr := json.Marshal(wordpressPost)
   if marshalErr != nil {
     ctx.JSON(http.StatusBadRequest, gin.H{"error": bindErr.Error()})
     ctx.Abort()
@@ -92,7 +92,7 @@ func ProvePost(ctx *gin.Context) {
   }
 
   // 5b) the value at this index of the map is this value, so, fresh and included
-  if (reflect.DeepEqual(leafData, mapLeafValue)) {
+  if (reflect.DeepEqual(wordpressPost.Data, string(mapLeafValue))) {
     ctx.JSON(200, gin.H{
       "IsIncluded": true,
       "IsMostCurrent": true,
