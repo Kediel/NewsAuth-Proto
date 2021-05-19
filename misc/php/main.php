@@ -10,7 +10,7 @@ function PPP2021_send_post_request($data)
             'Content-Type: application/json'
         )
     );
-    $response  = wp_remote_post(<backend-url>, $args);
+    $response  = wp_remote_post(<server-url>, $args);
     $http_code = wp_remote_retrieve_response_code($response);
     if ($http_code !== 200) {
         error_log('error: network error posting to verifiable datastructure');
@@ -21,38 +21,49 @@ function PPP2021_send_post_request($data)
 function PPP2021_commit_post_transition($new_status, $old_status, $post_id)
 {
 
+	// error check, can ignore
     if (is_null($post_id)) {
         error_log('error: $post_id is null, unable to commit post transition to verifiable datastructure');
         return;
     }
 
+	// get some of the basic information about the post, from the ID
     $post = get_post($post_id); // example below
     if (is_null($post)) {
         error_log('error: $post is null, unable to commit post transition to verifiable datastructure');
         return;
     }
 
+	// get some additional information about the post, extra can be explored at end
     if ($post->post_author) {
         // include display_name in the verifiable datastructure
         $post->post_author_display_name = get_the_author_meta('display_name', $post->post_author);
     }
 
-    $json_data = array(
+	// this is what will get HTTP posted to log/ map server
+	// it corresponds to WordpressPost type
+	// https://github.com/z-tech/blue/blob/main/src/types/wordpressPost.go#L5
+    $data = array(
         'ID' => $post->ID,
         'Data' => PPP2021_get_post_hash($post_id)
     );
-    PPP2021_send_post_request($json_data);
+    PPP2021_send_post_request($data);
 }
 
 add_action('transition_post_status', 'PPP2021_commit_post_transition', 10, 3);
 
 function PPP2021_get_post_hash($post_id)
 {
+	// same as lines 42-53
 	$post = get_post($post_id);
     if ($post->post_author) {
         // include display_name in the verifiable datastructure
         $post->post_author_display_name = get_the_author_meta('display_name', $post->post_author);
     }
+	// runs that object through sha256 cryptographic hash
+	// THIS IS WHERE YOU WANNA MAKE YOUR CHANGES
+	// $stringified_schema_org_format = '<xml><ID>' . $post->ID . '</ID></xml>';
+	// return hash('sha256', $stringified_schema_org_format);
 	return hash('sha256', json_encode($post));
 }
 
@@ -90,3 +101,4 @@ Example value of $post:
 }
 */
 ?>
+
