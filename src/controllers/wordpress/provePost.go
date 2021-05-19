@@ -64,7 +64,7 @@ func ProvePost(ctx *gin.Context) {
     ctx.Abort()
     return
   }
-  leafIndex, _, logProof, _, _, getLogLeafErr := grpcDatalayer.GetLogLeaf(
+  leafIndex, logTreeSize, logProof, _, _, getLogLeafErr := grpcDatalayer.GetLogLeaf(
     ctx,
     logAddress,
     logID,
@@ -84,6 +84,8 @@ func ProvePost(ctx *gin.Context) {
       "IsIncluded": false,
       "IsMostCurrent": false,
       "LogInclusionProof": logProof,
+      "LogLeafIndex": leafIndex,
+      "LogTreeSize": logTreeSize,
       "MapInclusionProof": nil,
       "MapNonInclusionProof": mapProof,
     })
@@ -97,6 +99,8 @@ func ProvePost(ctx *gin.Context) {
       "IsIncluded": true,
       "IsMostCurrent": true,
       "LogInclusionProof": logProof,
+      "LogLeafIndex": leafIndex,
+      "LogTreeSize": logTreeSize,
       "MapInclusionProof": mapProof,
       "MapNonInclusionProof": nil,
     })
@@ -109,6 +113,8 @@ func ProvePost(ctx *gin.Context) {
       "IsIncluded": false,
       "IsMostCurrent": false,
       "LogInclusionProof": logProof,
+      "LogLeafIndex": leafIndex,
+      "LogTreeSize": logTreeSize,
       "MapInclusionProof": nil,
       "MapNonInclusionProof": mapProof,
     })
@@ -120,6 +126,8 @@ func ProvePost(ctx *gin.Context) {
     "IsIncluded": true,
     "IsMostCurrent": false,
     "LogInclusionProof": logProof,
+    "LogLeafIndex": leafIndex,
+    "LogTreeSize": logTreeSize,
     "MapInclusionProof": nil,
     "MapNonInclusionProof": mapProof,
   })

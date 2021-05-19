@@ -145,3 +145,31 @@ test('rootFromInclusionProof - 17 older leaf', () => {
   );
   expect(computedRoot.toString('base64')).toEqual(b64RootHash);
 });
+
+test('live', () => {
+  const b64RootHash: string = 'g3FnfguCfgttsfEssCRtA8drAnD+rTeMYcj\/4n9ulKc=';
+  const b64LeafHash: string = 'dbBmhEytFh+sBNAFCMrl2ycF157r36BN3goLdxhgDss=';
+  const b64Proof: string[] = [
+    "OaOVTXjirhUfVXvlzmgTlzy2tPzgiVNN+UpiCI3NoGM=",
+    "rp2KkeMnF8nF23sR//bcXrV4QoqsZHYvRccldKXzJZM=",
+    "uewJNjobgH9PoEj/JyErmGsP+MY9ZdkCsPPdWVj8xuw=",
+    "D2KCChpM546Wv9efhaxHoswpGaD2TwD17J2YScimfgk=",
+    "uu65oAfui8iQ6SXb5TTq+Yw3KNA1OSjEXmMTAwBenio=",
+    "yhjiiNzqUsgm/POz/uoFiR3MqTAyerZUrRekBFtHPVc=",
+    "gIISiTanq+o48XY5RNC1AuL5YMrt9PSVEVL9vk5nzjw=",
+    "ckyyc8VhBBLzgbjtnNznkIjx6FY7Ua/Qycigbw8m3rw="
+  ];
+  const leafHash: Buffer = Buffer.from(b64LeafHash, 'base64');
+  const leafIndex = 224;
+  const treeSize = 225;
+  const proof: Buffer[] = b64Proof.map((b64Hash: string): Buffer =>
+    Buffer.from(b64Hash, 'base64')
+  );
+  const computedRoot: Buffer = rootFromInclusionProof(
+    leafIndex,
+    treeSize,
+    proof,
+    leafHash
+  );
+  expect(computedRoot.toString('base64')).toEqual(b64RootHash);
+});
