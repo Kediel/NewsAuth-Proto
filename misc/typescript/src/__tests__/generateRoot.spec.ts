@@ -147,21 +147,20 @@ test('rootFromInclusionProof - 17 older leaf', () => {
 });
 
 test('live', () => {
-  const b64RootHash: string = 'g3FnfguCfgttsfEssCRtA8drAnD+rTeMYcj\/4n9ulKc=';
-  const b64LeafHash: string = 'dbBmhEytFh+sBNAFCMrl2ycF157r36BN3goLdxhgDss=';
+  const b64RootHash: string = 'bRI+sfd8ihAPrd13DhLcGKuzLvMl4c09AvH6H8p871Q=';
+  const b64LeafHash: string = 'zy+pWFu0Lsa2BFypQhl3c9DkmAv7frSwz52o0wxEvIg=';
   const b64Proof: string[] = [
-    "OaOVTXjirhUfVXvlzmgTlzy2tPzgiVNN+UpiCI3NoGM=",
-    "rp2KkeMnF8nF23sR//bcXrV4QoqsZHYvRccldKXzJZM=",
-    "uewJNjobgH9PoEj/JyErmGsP+MY9ZdkCsPPdWVj8xuw=",
-    "D2KCChpM546Wv9efhaxHoswpGaD2TwD17J2YScimfgk=",
-    "uu65oAfui8iQ6SXb5TTq+Yw3KNA1OSjEXmMTAwBenio=",
-    "yhjiiNzqUsgm/POz/uoFiR3MqTAyerZUrRekBFtHPVc=",
+    "T7JT\/h2ZAARfDXWKCWIPvKLNHx6yFg\/pPbPdT7ZoUbE=",
+    "dzbfr+SoLjTr0HuJIU9gutI2fQjRD9LAnViFNqJK7jU=",
+    "uk+EC9PH900NQ4K9ink\/dnrLf174mCIS8riY+bw+e70=",
+    "CPFORl1002PwWGhf7\/BrYcu+AvGC3PDNbt2MdrWJF5M=",
+    "nFvANxtlT+HoNcu94+Y1nmZvvg3aZSjJDLPASQAhrJc=",
     "gIISiTanq+o48XY5RNC1AuL5YMrt9PSVEVL9vk5nzjw=",
-    "ckyyc8VhBBLzgbjtnNznkIjx6FY7Ua/Qycigbw8m3rw="
+    "ckyyc8VhBBLzgbjtnNznkIjx6FY7Ua\/Qycigbw8m3rw="
   ];
   const leafHash: Buffer = Buffer.from(b64LeafHash, 'base64');
-  const leafIndex = 223;
-  const treeSize = 225;
+  const leafIndex = 231;
+  const treeSize = 233;
   const proof: Buffer[] = b64Proof.map((b64Hash: string): Buffer =>
     Buffer.from(b64Hash, 'base64')
   );

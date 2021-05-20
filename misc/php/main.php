@@ -64,7 +64,7 @@ function PPP2021_commit_post_transition($new_status, $old_status, $post_id)
         'ID' => $post->ID,
         'Data' => PPP2021_get_post_hash($post_id)
     );
-    PPP2021_send_post_request('server-url', $data);
+    PPP2021_send_post_request('http://ec2-54-210-116-133.compute-1.amazonaws.com:8080/v1/commitWordpressPost', $data);
 }
 
 add_action('transition_post_status', 'PPP2021_commit_post_transition', 10, 3);
@@ -82,7 +82,21 @@ function PPP2021_get_post_hash($post_id)
     // THIS IS WHERE YOU WANNA MAKE YOUR CHANGES
     // $stringified_schema_org_format = '<xml><ID>' . $post->ID . '</ID></xml>';
     // return hash('sha256', $stringified_schema_org_format);
-    return hash('sha256', json_encode($post));
+    return base64_encode(hash('sha256', json_encode($post), true)); // true means binary instead of lowercase hexits
+}
+
+function PPP2021_get_post_log_hash($post_id)
+{
+    // same as lines 42-53
+    $post = get_post($post_id);
+    if ($post->post_author)
+    {
+        // include display_name in the verifiable datastructure
+        $post->post_author_display_name = get_the_author_meta('display_name', $post->post_author);
+    }
+	$RFC6962LeafHashPrefix = chr(0); // https://www.php.net/manual/en/function.chr.php
+	$log_leaf_string = $RFC6962LeafHashPrefix . $post->ID . ',' . PPP2021_get_post_hash($post_id);
+    return base64_encode(hash('sha256', $log_leaf_string, true)); // true means binary instead of lowercase hexits
 }
 
 function PPP2021_get_proofs($post_id)
@@ -96,9 +110,21 @@ function PPP2021_get_proofs($post_id)
     return json_decode($result);
 }
 
+function PPP2021_get_tree_roots()
+{
+	$result = wp_remote_get('server-url');
+	$result = wp_remote_retrieve_body($result);
+    return json_decode($result);
+}
+
 function PPP2021_get_pretty_printed_proofs($post_id)
 {
     return json_encode(PPP2021_get_proofs($post_id) , JSON_PRETTY_PRINT);
+}
+
+function PPP2021_get_pretty_printed_tree_roots()
+{
+    return json_encode(PPP2021_get_tree_roots() , JSON_PRETTY_PRINT);
 }
 
 add_action('transition_post_status', 'PPP2021_commit_post_transition', 10, 3);
