@@ -2,10 +2,10 @@ package wordpressController
 
 import (
   "encoding/binary"
-  "encoding/json"
   "fmt"
   "net/http"
   "reflect"
+  "strconv"
 
   "github.com/gin-gonic/gin"
   "github.com/gin-gonic/gin/binding"
@@ -58,12 +58,7 @@ func ProvePost(ctx *gin.Context) {
   }
 
   // 4) get proof from log
-  leafData, marshalErr := json.Marshal(wordpressPost)
-  if marshalErr != nil {
-    ctx.JSON(http.StatusBadRequest, gin.H{"error": bindErr.Error()})
-    ctx.Abort()
-    return
-  }
+  leafData := []byte(strconv.FormatUint(wordpressPost.ID, 10) + "," + wordpressPost.Data);
   leafIndex, logTreeSize, logProof, _, _, getLogLeafErr := grpcDatalayer.GetLogLeaf(
     ctx,
     logAddress,

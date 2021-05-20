@@ -2,9 +2,9 @@ package wordpressController
 
 import (
   "encoding/binary"
-  "encoding/json"
   "fmt"
   "net/http"
+  "strconv"
 
   "github.com/gin-gonic/gin"
   "github.com/gin-gonic/gin/binding"
@@ -41,12 +41,7 @@ func CommitPost(ctx *gin.Context) {
   }
 
   // 3) add leaf to log
-  logLeafData, logLeafMarshalErr := json.Marshal(wordpressPost) // { id: <id>, data: <data> }
-  if logLeafMarshalErr != nil {
-    ctx.JSON(http.StatusBadRequest, gin.H{"error": bindErr.Error()})
-    ctx.Abort()
-    return
-  }
+  logLeafData := []byte(strconv.FormatUint(wordpressPost.ID, 10) + "," + wordpressPost.Data);
   addLogLeafErr := grpcDatalayer.AddLogLeaf(ctx, logAddress, logID, logLeafData)
   if addLogLeafErr != nil {
     fmt.Printf("error: unable to add log leaf %v\n", addLogLeafErr)
