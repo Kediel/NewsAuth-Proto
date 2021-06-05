@@ -32,23 +32,29 @@ function PPP2021_send_post_request($url, $data)
     return wp_remote_retrieve_body($response);
 }
 
-function PPP2021_commit_post_transition($new_status, $old_status, $post_id)
+function PPP2021_commit_post_transition($new_status, $old_status, $post)
 {
-
-    // error check, can ignore
-    if (is_null($post_id))
+    // error check
+    if (is_null($post))
     {
         error_log('error: $post_id is null, unable to commit post transition to verifiable datastructure');
         return;
     }
 
-    // get some of the basic information about the post, from the ID
-    $post = get_post($post_id); // example below
-    if (is_null($post))
-    {
-        error_log('error: $post is null, unable to commit post transition to verifiable datastructure');
-        return;
-    }
+    // this is what will get HTTP posted to log/ map server
+    // it corresponds to WordpressPost type
+    // https://github.com/z-tech/blue/blob/main/src/types/wordpressPost.go#L5
+    $data = array(
+        'ID' => $post->ID,
+        'Data' => PPP2021_get_post_map_hash($post->ID)
+    );
+    PPP2021_send_post_request('http://ec2-54-210-116-133.compute-1.amazonaws.com:8080/v1/commitWordpressPost', $data);
+}
+
+function PPP2021_get_post($post_id)
+{
+	// get some of the basic information about the post, from the ID
+    $post = get_post($post_id);
 
     // get some additional information about the post, extra can be explored at end
     if ($post->post_author)
@@ -57,74 +63,58 @@ function PPP2021_commit_post_transition($new_status, $old_status, $post_id)
         $post->post_author_display_name = get_the_author_meta('display_name', $post->post_author);
     }
 
-    // this is what will get HTTP posted to log/ map server
-    // it corresponds to WordpressPost type
-    // https://github.com/z-tech/blue/blob/main/src/types/wordpressPost.go#L5
-    $data = array(
-        'ID' => $post->ID,
-        'Data' => PPP2021_get_post_hash($post_id)
-    );
-    PPP2021_send_post_request('http://ec2-54-210-116-133.compute-1.amazonaws.com:8080/v1/commitWordpressPost', $data);
+	// urlencode post_content bc it can contain valid html (which is invalid json)
+	// not the best solution but at least it is reversible
+	$post->post_content = urlencode($post->post_content);
+
+	return $post;
 }
 
-add_action('transition_post_status', 'PPP2021_commit_post_transition', 10, 3);
-
-function PPP2021_get_post_hash($post_id)
+function PPP2021_get_post_map_hash($post_id)
 {
-    // same as lines 42-53
-    $post = get_post($post_id);
-    if ($post->post_author)
-    {
-        // include display_name in the verifiable datastructure
-        $post->post_author_display_name = get_the_author_meta('display_name', $post->post_author);
-    }
-    // runs that object through sha256 cryptographic hash
-    // THIS IS WHERE YOU WANNA MAKE YOUR CHANGES
-    // $stringified_schema_org_format = '<xml><ID>' . $post->ID . '</ID></xml>';
-    // return hash('sha256', $stringified_schema_org_format);
+    // get post using helper function
+ 	$post = PPP2021_get_post($post_id);
     return base64_encode(hash('sha256', json_encode($post), true)); // true means binary instead of lowercase hexits
 }
 
 function PPP2021_get_post_log_hash($post_id)
 {
-    // same as lines 42-53
-    $post = get_post($post_id);
-    if ($post->post_author)
-    {
-        // include display_name in the verifiable datastructure
-        $post->post_author_display_name = get_the_author_meta('display_name', $post->post_author);
-    }
 	$RFC6962LeafHashPrefix = chr(0); // https://www.php.net/manual/en/function.chr.php
-	$log_leaf_string = $RFC6962LeafHashPrefix . $post->ID . ',' . PPP2021_get_post_hash($post_id);
+	$log_leaf_string = $RFC6962LeafHashPrefix . $post_id . ',' . PPP2021_get_post_map_hash($post_id);
     return base64_encode(hash('sha256', $log_leaf_string, true)); // true means binary instead of lowercase hexits
 }
 
 function PPP2021_get_proofs($post_id)
 {
-    $hash = PPP2021_get_post_hash($post_id);
+    $hash = PPP2021_get_post_map_hash($post_id);
     $data = array(
         'ID' => $post_id,
         'Data' => $hash
     );
-    $result = PPP2021_send_post_request('server-url', $data);
-    return json_decode($result);
+    $result = PPP2021_send_post_request('http://ec2-54-210-116-133.compute-1.amazonaws.com:8080/v1/proveWordpressPost', $data);
+	return json_decode($result);
 }
 
 function PPP2021_get_tree_roots()
 {
-	$result = wp_remote_get('server-url');
+	$result = wp_remote_get('http://ec2-54-210-116-133.compute-1.amazonaws.com:8080/v1/getTreeRoots');
 	$result = wp_remote_retrieve_body($result);
     return json_decode($result);
 }
 
+function PPP2021_get_pretty_printed_post($post_id)
+{
+	return json_encode(PPP2021_get_post($post_id));
+}
+
 function PPP2021_get_pretty_printed_proofs($post_id)
 {
-    return json_encode(PPP2021_get_proofs($post_id) , JSON_PRETTY_PRINT);
+    return json_encode(PPP2021_get_proofs($post_id), JSON_PRETTY_PRINT);
 }
 
 function PPP2021_get_pretty_printed_tree_roots()
 {
-    return json_encode(PPP2021_get_tree_roots() , JSON_PRETTY_PRINT);
+    return json_encode(PPP2021_get_tree_roots(), JSON_PRETTY_PRINT);
 }
 
 add_action('transition_post_status', 'PPP2021_commit_post_transition', 10, 3);
