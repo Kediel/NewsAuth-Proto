@@ -48,7 +48,7 @@ function PPP2021_commit_post_transition($new_status, $old_status, $post)
         'ID' => $post->ID,
         'Data' => PPP2021_get_post_map_hash($post->ID)
     );
-    PPP2021_send_post_request('http://ec2-54-210-116-133.compute-1.amazonaws.com:8080/v1/commitWordpressPost', $data);
+    PPP2021_send_post_request('https://newsauth-provenance.org/v1/commitWordpressPost', $data);
 }
 
 function PPP2021_get_post($post_id)
@@ -91,13 +91,13 @@ function PPP2021_get_proofs($post_id)
         'ID' => $post_id,
         'Data' => $hash
     );
-    $result = PPP2021_send_post_request('http://ec2-54-210-116-133.compute-1.amazonaws.com:8080/v1/proveWordpressPost', $data);
+    $result = PPP2021_send_post_request('https://newsauth-provenance.org/v1/proveWordpressPost', $data);
 	return json_decode($result);
 }
 
 function PPP2021_get_tree_roots()
 {
-	$result = wp_remote_get('http://ec2-54-210-116-133.compute-1.amazonaws.com:8080/v1/getTreeRoots');
+	$result = wp_remote_get('https://newsauth-provenance.org/v1/getTreeRoots');
 	$result = wp_remote_retrieve_body($result);
     return json_decode($result);
 }
