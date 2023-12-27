@@ -1,8 +1,7 @@
-<!--
-Code to be updated.
--->
 # NewsAuth Prototype v2
 ## API wrapper for [Google Trillian](https://github.com/google/trillian) cryptographically verified logs
+
+All updates to be made within the v2 directory. -k3ma5
 
 <!--
 Useful Links:
